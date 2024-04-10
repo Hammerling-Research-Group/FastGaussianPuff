@@ -36,7 +36,7 @@ protected:
     int N_points;
 
     const Vector wind_speeds, wind_directions;
-    Vector sigma_y, sigma_z;
+    // Vector sigma_y, sigma_z;
 
     double thresh_xy_max, thresh_z_max;
 
@@ -99,8 +99,8 @@ public:
             this->exp = [](double x){return std::exp(x);};
         }
 
-        sigma_y = Vector(N_points);
-        sigma_z = Vector(N_points);
+        // sigma_y = Vector(N_points);
+        // sigma_z = Vector(N_points);
 
         this->sim_start = std::chrono::system_clock::to_time_t(sim_start);
         this->sim_end = std::chrono::system_clock::to_time_t(sim_end);
@@ -186,11 +186,24 @@ private:
         char stability_class = stabilityClassifier(ws, hour);
 
         // gets sigma coefficients and stores in sigma_{y,z} class member vars
-        getSigmaCoefficients(stability_class, X_rot);
+        // getSigmaCoefficients(stability_class, X_rot);
 
-        GaussianPuffEquation(q, ws,
-                            X_rot, Y_rot,
-                            ch4);
+        GaussianPuffEquation(q, ws, stability_class,
+                    X_rot, Y_rot,
+                    ch4);
+    }
+
+    void getPuffCenteredSigmas(std::vector<double>& sigma_y, std::vector<double>& sigma_z,
+                                         int n_time_steps, double ws, char stability_class){
+        std::vector<double> downwind_dists = std::vector<double>(n_time_steps+1);
+
+        double shift_per_step = ws*sim_dt;
+        downwind_dists[0] = 0;
+        for(int i = 1; i <= n_time_steps; i++){
+            downwind_dists[i] = downwind_dists[i-1] + shift_per_step;
+        }
+
+        getSigmaCoefficients(sigma_y, sigma_z, stability_class, downwind_dists);
     }
 
     /* Evaluates the Gaussian Puff equation on the grids. 
@@ -205,12 +218,24 @@ private:
         none, but the concentrations are added into the concentration array.
     */
     void GaussianPuffEquation(
-        double q, double ws,
+        double q, double ws, char stability_class,
         RefVector X_rot, RefVector Y_rot,
         RefMatrix ch4) {
 
-        double sigma_y_max = sigma_y.maxCoeff();
-        double sigma_z_max = sigma_z.maxCoeff();
+        double x_rot_max = X_rot.maxCoeff(); // furthest downwind distance possible
+        std::vector<double> temp(1);
+        std::vector<double> temp_y(1);
+        std::vector<double> temp_z(1);
+        temp[0] = x_rot_max;
+
+        getSigmaCoefficients(temp_y, temp_z, stability_class, temp); // get maximum sigma coeffs
+        double sigma_y_max = temp_y[0];
+        double sigma_z_max = temp_z[0];
+
+
+
+        // double sigma_y_max = sigma_y.maxCoeff();
+        // double sigma_z_max = sigma_z.maxCoeff();
 
         // compute thresholds
         double prefactor = (q * conversion_factor * one_over_two_pi_three_halves) / (sigma_y_max * sigma_y_max * sigma_z_max);
@@ -224,6 +249,11 @@ private:
 
         int n_time_steps = ceil(t / sim_dt); // rescale to unitless number of timesteps
 
+        std::vector<double> sigma_y(n_time_steps+1);
+        std::vector<double> sigma_z(n_time_steps+1);
+
+        getPuffCenteredSigmas(sigma_y, sigma_z, n_time_steps, ws, stability_class);
+
         // bound check on time
         if (n_time_steps >= ch4.rows()) {
             n_time_steps = ch4.rows() - 1;
@@ -231,19 +261,33 @@ private:
 
         for (int i = n_time_steps; i >= 0; i--) {
 
+            // std::cout << "sig_y_i: " << sigma_y[i] << std::endl;
+            // std::cout << "sig_z_i: " << sigma_z[i] << std::endl;
+            // continue;
+
             // wind_shift is distance [m] plume has moved from source
             double wind_shift = ws * (i * sim_dt); // i*sim_dt is # of seconds on current time step
 
-            std::vector<int> indices = coarseSpatialThreshold(wind_shift, thresh_constant);
-
+            std::vector<int> indices = coarseSpatialThreshold(wind_shift, thresh_constant, sigma_y[i], sigma_z[i]);
+ 
             for (int j : indices) {
 
-                // Skips upwind cells since sigma_{y,z} = -1 for upwind points
-                if (sigma_y[j] < 0 || sigma_z[j] < 0) {
+                // double X_rot_shift = X_rot[j] - wind_shift;
+
+                // Skips upwind cells since upwind diffusion is ignored
+                // note: have to skip zero case since sigma_{y,z} = -1 when x=0
+                // if (X_rot_shift <= 0) {
+                if(sigma_y[i] <= 0 || sigma_z[i] <= 0){
                     continue;
                 }
 
-                double t_xy = sigma_y[j] * thresh_constant; // local threshold
+                if(sigma_y[i] <= 0 || sigma_z[i] <= 0){
+                    std::cout << "PROBLEM\n";
+                    std::cout << i << std::endl;
+                    exit(-1);
+                }
+
+                double t_xy = sigma_y[i] * thresh_constant; // local threshold
 
                 // Exponential thresholding conditionals
                 if (std::abs(X_rot[j] - wind_shift) >= t_xy) {
@@ -254,15 +298,15 @@ private:
                     continue;
                 }
 
-                double t_z = sigma_z[j] * thresh_constant; // local threshold
+                double t_z = sigma_z[i] * thresh_constant; // local threshold
 
                 if (std::abs(Z[j] - z0) >= t_z) {
                     continue;
                 }
 
                 // terms are written in a way to minimize divisions and exp evaluations
-                double one_over_sig_y = 1 / sigma_y[j];
-                double one_over_sig_z = 1 / sigma_z[j];
+                double one_over_sig_y = 1 / sigma_y[i];
+                double one_over_sig_z = 1 / sigma_z[i];
 
                 double y_by_sig = Y_rot[j] * one_over_sig_y;
                 double x_by_sig = (X_rot[j] - wind_shift) * one_over_sig_y;
@@ -424,14 +468,14 @@ private:
     Returns:
         None, but sigma_y and sigma_z class variables are filled with the dispersion coefficients.
     */
-    void getSigmaCoefficients(char stability_class, Vector X_rot){
-        X_rot = X_rot.array() * 0.001; // convert to km
+    void getSigmaCoefficients(std::vector<double>& sigma_y, std::vector<double>& sigma_z, char stability_class, std::vector<double>& X_rot){
+        // X_rot = X_rot.array() * 0.001; // convert to km
 
         for(int i = 0; i < X_rot.size(); i++){
             int flag = 0;
             double a, b, c, d;
 
-            double x = X_rot[i];
+            double x = X_rot[i] * 0.001; // convert to km
 
             if (x <= 0) {
                 sigma_y[i] = -1;
@@ -592,7 +636,7 @@ private:
 
     // somewhat hacky way of making this act as an abstract function
     // okay with this for now since it's private and can't get called from python due to lack of bindings
-    virtual std::vector<int> coarseSpatialThreshold(double, double){ throw std::logic_error("Not implemented"); }
+    virtual std::vector<int> coarseSpatialThreshold(double, double, double, double){ throw std::logic_error("Not implemented"); }
 
     static double fastExp(double x){
         constexpr double a = (1ll << 52) / 0.6931471805599453;
@@ -690,16 +734,14 @@ private:
     
 
     // The grid-based spatial thresholding uses inequalities based on grid indices 
-    std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant) override {
+    std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant, 
+                        double sig_y_current,  double sig_z_current) override {
 
         std::vector<int> indices = getValidIndices(thresh_xy_max, thresh_z_max, wind_shift);
 
-        if(!indices.empty()){
-            // shrinks the thresholds
-            double box_max_sig_y = sigma_y(indices).maxCoeff(); // max sigma of the current valid indices
-            double box_max_sig_z = sigma_z(indices).maxCoeff();
-            thresh_xy_max = box_max_sig_y*thresh_constant;
-            thresh_z_max = box_max_sig_z*thresh_constant;
+        if(sig_y_current > 0 && sig_z_current > 0){
+            thresh_xy_max = sig_y_current*thresh_constant;
+            thresh_z_max = sig_z_current*thresh_constant;
         }
 
         return indices;
@@ -738,7 +780,7 @@ private:
 
         double Xrt_dot_v = X0_rt.dot(v);
         double Xrt_dot_vp = X0_rt.dot(vp);
-        double norm_sq_Xrt = X0_rt.dot(X0_rt);
+        // double norm_sq_Xrt = X0_rt.dot(X0_rt); TODO remove
 
         double one_over_dx = 1/dx;
         double one_over_dy = 1/dy;
@@ -876,7 +918,8 @@ public:
     }
 private:
     // mostly a stub, can add a precomputed spatial threshold later
-    std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant) override {
+    std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant, 
+                        double sig_y_current,  double sig_z_current) override {
         return indices;
     }
 
