@@ -444,19 +444,25 @@ private:
         stability_class: character A-F representing a Pasquill stability class
     */
     char stabilityClassifier(double wind_speed, int hour, int day_start=7, int day_end=19) {
-        bool is_day = (hour >= day_start) && (hour <= day_end);
-        char stability_class;
 
-        if (wind_speed < 2.0) {
-            stability_class = is_day ? 'A' : 'E';
-        } else if (wind_speed < 5.0) {
-            stability_class = is_day ? 'B' : 'E';
+        bool is_day = (hour >= day_start) && (hour <= day_end);
+        char stab_class;
+
+        if (wind_speed < 2) {
+            stab_class = is_day ? 'A' : 'E';
+        } else if (wind_speed < 3) {
+            stab_class = is_day ? 'B' : 'E';
+        } else if (wind_speed < 5) {
+            stab_class = is_day ? 'C' : 'E';
+        } else if (wind_speed < 6) {
+            stab_class = is_day ? 'C' : 'D';
         } else {
-            stability_class = 'D';
+            stab_class = 'D';
         }
 
-        return stability_class;
+        return stab_class;
     }
+
 
     /* Gets dispersion coefficients (sigma_{y,z}) for the entire grid.
         sigma_z = a*x^b, x in km,
