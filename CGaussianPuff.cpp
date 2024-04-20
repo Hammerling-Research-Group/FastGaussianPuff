@@ -235,13 +235,9 @@ private:
         RefVector X_rot, RefVector Y_rot,
         RefMatrix ch4) {
 
-        // TODO 1: find where puff will leave grid
         Vector2d exit_location = calculateExitLocation(ws);
         double max_downwind_dist = sqrt(exit_location[0]*exit_location[0] + exit_location[1]*exit_location[1]);
-            // this can be independent of wind speed
-        // TODO 2: use that dist to compute max sigma coeff below
 
-        // double x_rot_max = X_rot.maxCoeff(); // furthest downwind distance possible
         std::vector<double> temp(1);
         std::vector<double> temp_y(1);
         std::vector<double> temp_z(1);
@@ -252,11 +248,7 @@ private:
         double sigma_z_max = temp_z[0];
 
 
-
-        // double sigma_y_max = sigma_y.maxCoeff();
-        // double sigma_z_max = sigma_z.maxCoeff();
-
-        // compute thresholds
+        // compute the maximum plume size and find out when it will leave the domain
         double prefactor = (q * conversion_factor * one_over_two_pi_three_halves) / (sigma_y_max * sigma_y_max * sigma_z_max);
         double threshold = std::log(exp_tol / (2 * prefactor));
         double thresh_constant = std::sqrt(-2 * threshold);
@@ -280,7 +272,7 @@ private:
 
         // TODO 3: make this time loop go forward. start at 1 since 0 has a 0 sigma coeff
 
-        for (int i = n_time_steps; i >= 0; i--) {
+        for (int i = 1; i <= n_time_steps; i++) {
 
             // std::cout << "sig_y_i: " << sigma_y[i] << std::endl;
             // std::cout << "sig_z_i: " << sigma_z[i] << std::endl;
