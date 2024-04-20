@@ -206,6 +206,19 @@ private:
         getSigmaCoefficients(sigma_y, sigma_z, stability_class, downwind_dists);
     }
 
+    Vector2d calculateExitLocation(double ws){
+
+        Vector2d box_min(x_min, y_min);
+        Vector2d box_max(x_max, y_max);
+        Vector2d origin(0,0);
+        Vector2d rayDir(cosine, -sine);
+        Vector2d invRayDir = rayDir.cwiseInverse();
+
+        Vector2d exit_times = AABB(box_min, box_max, origin, invRayDir);
+
+        return exit_times[1]*rayDir;
+    }
+
     /* Evaluates the Gaussian Puff equation on the grids. 
     Inputs:
         q: Total emission corresponding to this puff (kg)
@@ -222,11 +235,17 @@ private:
         RefVector X_rot, RefVector Y_rot,
         RefMatrix ch4) {
 
-        double x_rot_max = X_rot.maxCoeff(); // furthest downwind distance possible
+        // TODO 1: find where puff will leave grid
+        Vector2d exit_location = calculateExitLocation(ws);
+        double max_downwind_dist = sqrt(exit_location[0]*exit_location[0] + exit_location[1]*exit_location[1]);
+            // this can be independent of wind speed
+        // TODO 2: use that dist to compute max sigma coeff below
+
+        // double x_rot_max = X_rot.maxCoeff(); // furthest downwind distance possible
         std::vector<double> temp(1);
         std::vector<double> temp_y(1);
         std::vector<double> temp_z(1);
-        temp[0] = x_rot_max;
+        temp[0] = max_downwind_dist;
 
         getSigmaCoefficients(temp_y, temp_z, stability_class, temp); // get maximum sigma coeffs
         double sigma_y_max = temp_y[0];
@@ -259,6 +278,8 @@ private:
             n_time_steps = ch4.rows() - 1;
         }
 
+        // TODO 3: make this time loop go forward. start at 1 since 0 has a 0 sigma coeff
+
         for (int i = n_time_steps; i >= 0; i--) {
 
             // std::cout << "sig_y_i: " << sigma_y[i] << std::endl;
@@ -268,6 +289,7 @@ private:
             // wind_shift is distance [m] plume has moved from source
             double wind_shift = ws * (i * sim_dt); // i*sim_dt is # of seconds on current time step
 
+            // TODO 4: make this use the plume spatial threshold. currently, thresh_constant uses max sigma (i.e. too large of a box)
             std::vector<int> indices = coarseSpatialThreshold(wind_shift, thresh_constant, sigma_y[i], sigma_z[i]);
  
             for (int j : indices) {
@@ -287,8 +309,11 @@ private:
                     exit(-1);
                 }
 
+                // TODO 5: make this align with above and make sure thresh_constant is the local sigma
+
                 double t_xy = sigma_y[i] * thresh_constant; // local threshold
 
+                // TODO 6: get rid of grid rotation
                 // Exponential thresholding conditionals
                 if (std::abs(X_rot[j] - wind_shift) >= t_xy) {
                     continue;
