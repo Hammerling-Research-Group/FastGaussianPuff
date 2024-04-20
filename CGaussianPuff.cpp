@@ -304,16 +304,18 @@ private:
                 }
 
                 // terms are written in a way to minimize divisions and exp evaluations
-                double y_by_sig = (Y_centered[j] - y_shift) * one_over_sig_y;
-                double x_by_sig = (X_centered[j] - x_shift) * one_over_sig_y;
+                double y_dist_from_cent = (Y_centered[j] - y_shift);
+                double x_dist_from_cent = (X_centered[j] - x_shift);
                 double z_minus_by_sig = (Z[j] - z0) * one_over_sig_z;
                 double z_plus_by_sig = (Z[j] + z0) * one_over_sig_z;
 
+                double one_over_sig_y_sq = one_over_sig_y*one_over_sig_y;
+
                 double term_4_a_arg = z_minus_by_sig * z_minus_by_sig;
                 double term_4_b_arg = z_plus_by_sig * z_plus_by_sig;
-                double term_3_arg = (y_by_sig * y_by_sig + x_by_sig * x_by_sig);
+                double term_3_arg = (y_dist_from_cent * y_dist_from_cent + x_dist_from_cent * x_dist_from_cent)*one_over_sig_y_sq;
 
-                double term_1 = q * one_over_two_pi_three_halves * one_over_sig_y * one_over_sig_y * one_over_sig_z;
+                double term_1 = q * one_over_two_pi_three_halves * one_over_sig_y_sq * one_over_sig_z;
                 double term_4 = this->exp(-0.5 * (term_3_arg + term_4_a_arg)) + this->exp(-0.5 * (term_3_arg + term_4_b_arg));
 
                 ch4(i, j) += term_1 * term_4 * conversion_factor;
