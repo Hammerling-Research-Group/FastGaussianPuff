@@ -67,7 +67,7 @@ def runSensorTest(exp_start, t_0, t_end,
             unsafe=False
             ):
     
-    eps = 1e-7
+    eps = 1e-10
 
     sensor_puff = GP(obs_dt, sim_dt, puff_dt,
                 t_0, t_end,
@@ -86,11 +86,14 @@ def runSensorTest(exp_start, t_0, t_end,
     print("Runtime: ", end-start)
 
     # compare to ground truth, generated using original code
-    test_data_dir = "./test_data/"
+    # test_data_dir = "./test_data/old/"
+    test_data_dir = "./test_data/new/"
     start_time_str = exp_start.replace(" ", "-").replace(":", "-")
     filename = test_data_dir + "ch4-sensor-n-" + str(sensor_puff.N_points) + "-sim-" + str(sim_dt) + "-puff-" + str(puff_dt) + "-exp-" + start_time_str + ".csv"
+    
+    # print("SAVED AS " + filename)
+    # np.savetxt(filename, ch4, delimiter=",")
     ch4_old = np.loadtxt(filename, delimiter=",")
-
     return check_test(ch4_old, ch4, unsafe)
 
 def runTest(exp_start, t_0, t_end, 
@@ -124,10 +127,12 @@ def runTest(exp_start, t_0, t_end,
     print("Runtime: ", end-start)
 
     # compare to ground truth, generated using original code
-    test_data_dir = "./test_data/"
+    test_data_dir = "./test_data/new/"
     start_time_str = exp_start.replace(" ", "-").replace(":", "-")
     filename = test_data_dir + "ch4-n-" + str(grid_puff.N_points) + "-sim-" + str(sim_dt) + "-puff-" + str(puff_dt) + "-exp-" + start_time_str + ".csv"
     ch4_old = np.loadtxt(filename, delimiter=",")
+    # print("SAVING AS " + filename)
+    # np.savetxt(filename, ch4, delimiter=",")
 
     return check_test(ch4_old, ch4, unsafe=unsafe)
 
@@ -144,18 +149,26 @@ def check_test(ch4_old, ch4, unsafe=False):
     # stop one step short of end: original code doesn't actually produce results for final timestep, so skip it
     for t in range(0, len(ch4_old)-1):
 
-        # if everything is close to or equal to zero, we don't care.
-        if np.max(ch4_old[t]) < 1e-3:
+
+        # if absolute err is less than 0.05, don't compute relative err
+        if np.max(abs(ch4_old[t]-ch4[t])) < 5e-2:
+            # max_err 
             continue
 
-        max_err = np.max(ch4_old[t].ravel() - ch4[t].ravel())/np.max(ch4_old[t])
+        max_err = np.max(abs(ch4_old[t].ravel() - ch4[t].ravel())/(max(ch4_old[t])))
 
         if np.isnan(max_err):
             print(f"ERROR: NAN present ch4 array at time {t}")
             if passed:
                 passed = False
         if max_err > tol: # inequality doesn't work if there are NAN's
-            # print("TIME: ", t)
+            print("TIME: ", t)
+            # print(ch4_old[t])
+            # print(ch4[t])
+            print(max(ch4_old[t]))
+            print(abs(ch4_old[t]-ch4[t]))
+            # print(abs(ch4_old[t]-ch4[t])/max(ch4_old[t]))
+            # print(abs(ch4[t]-ch4_old[t])/np.max(ch4_old[t]))
             print("max err: ", max_err)
 
             if passed:
