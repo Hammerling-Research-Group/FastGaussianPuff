@@ -248,7 +248,7 @@ private:
         double sigma_z_max = temp_z[0];
 
 
-        // compute the maximum plume size and find out when it will leave the domain
+        // compute the maximum plume size
         double prefactor = (q * conversion_factor * one_over_two_pi_three_halves) / (sigma_y_max * sigma_y_max * sigma_z_max);
         double threshold = std::log(exp_tol / (2 * prefactor));
         double thresh_constant = std::sqrt(-2 * threshold);
@@ -256,6 +256,7 @@ private:
         thresh_xy_max = sigma_y_max * thresh_constant;
         thresh_z_max = sigma_z_max * thresh_constant;
 
+        // find out when puff will leave the domain
         double t = calculatePlumeTravelTime(thresh_xy_max, ws); // number of seconds til plume leaves grid
 
         int n_time_steps = ceil(t / sim_dt); // rescale to unitless number of timesteps
@@ -270,40 +271,34 @@ private:
             n_time_steps = ch4.rows() - 1;
         }
 
-        // TODO 3: make this time loop go forward. start at 1 since 0 has a 0 sigma coeff
+        double shift_per_step = ws*sim_dt;
+        double wind_shift  = 0;
 
+        // prefactor excluding the sigmas since those change each time step
+        prefactor = q*conversion_factor*one_over_two_pi_three_halves;
+
+        // start at 1 since plume hasn't moved any on it's 0th time step so it's effective dispersion is 0
         for (int i = 1; i <= n_time_steps; i++) {
+            // recompute threshold we use every step with current plume dispersion coefficient
+            double one_over_sig_y = 1/sigma_y[i];
+            double one_over_sig_z = 1/sigma_z[i];
 
-            // std::cout << "sig_y_i: " << sigma_y[i] << std::endl;
-            // std::cout << "sig_z_i: " << sigma_z[i] << std::endl;
-            // continue;
+            double temp = std::log(exp_tol / (2 * prefactor*one_over_sig_y*one_over_sig_y*one_over_sig_z));
+            double local_thresh = std::sqrt(-2 * temp);
 
             // wind_shift is distance [m] plume has moved from source
-            double wind_shift = ws * (i * sim_dt); // i*sim_dt is # of seconds on current time step
+            wind_shift += shift_per_step;
 
-            // TODO 4: make this use the plume spatial threshold. currently, thresh_constant uses max sigma (i.e. too large of a box)
-            std::vector<int> indices = coarseSpatialThreshold(wind_shift, thresh_constant, sigma_y[i], sigma_z[i]);
+            std::vector<int> indices = coarseSpatialThreshold(wind_shift, local_thresh, sigma_y[i], sigma_z[i]);
  
             for (int j : indices) {
 
-                // double X_rot_shift = X_rot[j] - wind_shift;
-
                 // Skips upwind cells since upwind diffusion is ignored
-                // note: have to skip zero case since sigma_{y,z} = -1 when x=0
-                // if (X_rot_shift <= 0) {
                 if(sigma_y[i] <= 0 || sigma_z[i] <= 0){
                     continue;
                 }
 
-                if(sigma_y[i] <= 0 || sigma_z[i] <= 0){
-                    std::cout << "PROBLEM\n";
-                    std::cout << i << std::endl;
-                    exit(-1);
-                }
-
-                // TODO 5: make this align with above and make sure thresh_constant is the local sigma
-
-                double t_xy = sigma_y[i] * thresh_constant; // local threshold
+                double t_xy = sigma_y[i] * local_thresh; // local threshold
 
                 // TODO 6: get rid of grid rotation
                 // Exponential thresholding conditionals
@@ -315,16 +310,13 @@ private:
                     continue;
                 }
 
-                double t_z = sigma_z[i] * thresh_constant; // local threshold
+                double t_z = sigma_z[i] * local_thresh; // local threshold
 
                 if (std::abs(Z[j] - z0) >= t_z) {
                     continue;
                 }
 
                 // terms are written in a way to minimize divisions and exp evaluations
-                double one_over_sig_y = 1 / sigma_y[i];
-                double one_over_sig_z = 1 / sigma_z[i];
-
                 double y_by_sig = Y_rot[j] * one_over_sig_y;
                 double x_by_sig = (X_rot[j] - wind_shift) * one_over_sig_y;
                 double z_minus_by_sig = (Z[j] - z0) * one_over_sig_z;
@@ -762,10 +754,10 @@ private:
 
         std::vector<int> indices = getValidIndices(thresh_xy_max, thresh_z_max, wind_shift);
 
-        if(sig_y_current > 0 && sig_z_current > 0){
-            thresh_xy_max = sig_y_current*thresh_constant;
-            thresh_z_max = sig_z_current*thresh_constant;
-        }
+        // if(sig_y_current > 0 && sig_z_current > 0){
+        //     thresh_xy_max = sig_y_current*thresh_constant;
+        //     thresh_z_max = sig_z_current*thresh_constant;
+        // }
 
         return indices;
     }
