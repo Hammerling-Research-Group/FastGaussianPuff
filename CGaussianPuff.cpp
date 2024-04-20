@@ -31,12 +31,10 @@ protected:
     double puff_duration;
 
     const Vector X, Y, Z;
-    Vector X_rot, Y_rot;
-    Matrix stackedGrid;
+    Vector X_centered, Y_centered;
     int N_points;
 
     const Vector wind_speeds, wind_directions;
-    // Vector sigma_y, sigma_z;
 
     double thresh_xy_max, thresh_z_max;
 
@@ -90,17 +88,12 @@ public:
     source_coordinates(source_coordinates), emission_strengths(emission_strengths),
     conversion_factor(conversion_factor), exp_tol(exp_tol), quiet(quiet) {
 
-        stackedGrid.resize(2, X.size());
-
         if(unsafe){
             if (!quiet) std::cout << "RUNNING IN UNSAFE MODE\n";
             this->exp = &fastExp; 
         } else {
             this->exp = [](double x){return std::exp(x);};
         }
-
-        // sigma_y = Vector(N_points);
-        // sigma_z = Vector(N_points);
 
         this->sim_start = std::chrono::system_clock::to_time_t(sim_start);
         this->sim_end = std::chrono::system_clock::to_time_t(sim_end);
@@ -177,19 +170,9 @@ private:
         cosine = cos(theta);
         sine = sin(theta);
 
-        Vector X_rot(X.size());
-        Vector Y_rot(Y.size());
-
-        // rotates X and Y grids, stores in X_rot and Y_rot
-        rotatePoints(X_rot, Y_rot);
-
         char stability_class = stabilityClassifier(ws, hour);
 
-        // gets sigma coefficients and stores in sigma_{y,z} class member vars
-        // getSigmaCoefficients(stability_class, X_rot);
-
         GaussianPuffEquation(q, ws, stability_class,
-                    X_rot, Y_rot,
                     ch4);
     }
 
@@ -232,7 +215,6 @@ private:
     */
     void GaussianPuffEquation(
         double q, double ws, char stability_class,
-        RefVector X_rot, RefVector Y_rot,
         RefMatrix ch4) {
 
         Vector2d exit_location = calculateExitLocation(ws);
@@ -272,7 +254,11 @@ private:
         }
 
         double shift_per_step = ws*sim_dt;
+        double x_shift_per_step = cosine*shift_per_step;
+        double y_shift_per_step = -sine*shift_per_step;
         double wind_shift  = 0;
+        double x_shift = 0;
+        double y_shift = 0;
 
         // prefactor excluding the sigmas since those change each time step
         prefactor = q*conversion_factor*one_over_two_pi_three_halves;
@@ -288,6 +274,8 @@ private:
 
             // wind_shift is distance [m] plume has moved from source
             wind_shift += shift_per_step;
+            x_shift += x_shift_per_step;
+            y_shift += y_shift_per_step;
 
             std::vector<int> indices = coarseSpatialThreshold(wind_shift, local_thresh, sigma_y[i], sigma_z[i]);
  
@@ -300,13 +288,12 @@ private:
 
                 double t_xy = sigma_y[i] * local_thresh; // local threshold
 
-                // TODO 6: get rid of grid rotation
                 // Exponential thresholding conditionals
-                if (std::abs(X_rot[j] - wind_shift) >= t_xy) {
+                if (std::abs(X_centered[j] - x_shift) >= t_xy) {
                     continue;
                 }
 
-                if (std::abs(Y_rot[j]) >= t_xy) {
+                if (std::abs(Y_centered[j] - y_shift) >= t_xy) {
                     continue;
                 }
 
@@ -317,8 +304,8 @@ private:
                 }
 
                 // terms are written in a way to minimize divisions and exp evaluations
-                double y_by_sig = Y_rot[j] * one_over_sig_y;
-                double x_by_sig = (X_rot[j] - wind_shift) * one_over_sig_y;
+                double y_by_sig = (Y_centered[j] - y_shift) * one_over_sig_y;
+                double x_by_sig = (X_centered[j] - x_shift) * one_over_sig_y;
                 double z_minus_by_sig = (Z[j] - z0) * one_over_sig_z;
                 double z_plus_by_sig = (Z[j] + z0) * one_over_sig_z;
 
@@ -332,26 +319,6 @@ private:
                 ch4(i, j) += term_1 * term_4 * conversion_factor;
             }
         }
-    }
-
-
-
-    /* Rotates the X and Y grids based on the current wind direction and source location.
-    Inputs:
-        X_rot, Y_rot: vectors the same size as the grid to get filled with rotated coordinates.
-    Returns:
-        None, but fills X_rot and Y_rot with the rotated grids.
-    */
-    void rotatePoints(RefVector X_rot, RefVector Y_rot){
-
-        Eigen::Matrix2d R;
-        R << cosine, -sine,
-            sine, cosine;
-
-        Matrix R_g = R*stackedGrid;
-
-        X_rot = R_g.row(0);
-        Y_rot = R_g.row(1);
     }
 
     /* Computes the time step when the plume will exit the computational grid. 
@@ -672,10 +639,9 @@ private:
         y0 = source_coordinates(source_index, 1);
         z0 = source_coordinates(source_index, 2);
 
-        Vector X_shift = X.array() - x0;
-        Vector Y_shift = Y.array() - y0;
-
-        stackedGrid << X_shift.transpose(), Y_shift.transpose();
+        // center the x,y grids at the source
+        X_centered = X.array() - x0;
+        Y_centered = Y.array() - y0;
 
         x_min = X.minCoeff() - x0;
         y_min = Y.minCoeff() - y0;
@@ -754,11 +720,6 @@ private:
 
         std::vector<int> indices = getValidIndices(thresh_xy_max, thresh_z_max, wind_shift);
 
-        // if(sig_y_current > 0 && sig_z_current > 0){
-        //     thresh_xy_max = sig_y_current*thresh_constant;
-        //     thresh_z_max = sig_z_current*thresh_constant;
-        // }
-
         return indices;
     }
 
@@ -795,7 +756,6 @@ private:
 
         double Xrt_dot_v = X0_rt.dot(v);
         double Xrt_dot_vp = X0_rt.dot(vp);
-        // double norm_sq_Xrt = X0_rt.dot(X0_rt); TODO remove
 
         double one_over_dx = 1/dx;
         double one_over_dy = 1/dy;
