@@ -155,7 +155,11 @@ def check_test(ch4_old, ch4, unsafe=False):
             # max_err 
             continue
 
-        max_err = np.max(abs(ch4_old[t].ravel() - ch4[t].ravel())/(max(ch4_old[t])))
+        diff = abs(ch4_old[t] - ch4[t])
+        max_diff = np.max(diff)
+        max_diff_ind = np.argmax(diff)
+
+        max_err = max_diff/ ch4_old[t][max_diff_ind]
 
         if np.isnan(max_err):
             print(f"ERROR: NAN present ch4 array at time {t}")
