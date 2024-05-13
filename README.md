@@ -51,7 +51,7 @@ $ conda env create -f environment.yml
 Then, activate the environment with:
 
 ```shell
-$ conda activate libmobility
+$ conda activate gp
 ```
 
 The module works with pip. To install, use:
