@@ -1,15 +1,10 @@
 import datetime
-from math import floor, ceil
-import sys
-import os
+from math import floor
 
 import numpy as np
 import pandas as pd
 
-bin_dir = os.path.dirname(__file__) + "/bin"
-sys.path.insert(0, bin_dir) # needs to contain the .so file from compilation
-
-import CGaussianPuff as C_GP
+import FastGaussianPuff.CGaussianPuff as C_GP
 
 class GaussianPuff:
     def __init__(self,
@@ -117,7 +112,7 @@ class GaussianPuff:
         self._interpolate_wind_data(wind_speeds, wind_directions, puff_dt, simulation_start, simulation_end)
 
         # save timeseries of simulation resolution so we can resample back to observation later
-        self.time_stamps_sim = pd.date_range(self.sim_start, self.sim_end, freq=str(self.sim_dt)+"S")
+        self.time_stamps_sim = pd.date_range(self.sim_start, self.sim_end, freq=str(self.sim_dt)+"s")
         self.n_sim = len(self.time_stamps_sim) # number of simulation time steps
 
         if puff_duration == None:
@@ -242,7 +237,7 @@ class GaussianPuff:
                                     'wind_v' : wind_v}, 
                             index = time_stamps)
         
-        wind_df = wind_df.resample(str(puff_dt)+'S').interpolate()
+        wind_df = wind_df.resample(str(puff_dt)+'s').interpolate()
         wind_u = wind_df['wind_u'].to_list()
         wind_v = wind_df['wind_v'].to_list()
 
@@ -350,9 +345,9 @@ class GaussianPuff:
 
         df = pd.DataFrame(c_matrix, index = self.time_stamps_sim)
         if mode == 'mean':
-            df = df.resample(str(resample_dt)+'S').mean()
+            df = df.resample(str(resample_dt)+'s').mean()
         elif mode == 'resample':
-            df = df.resample(str(resample_dt)+'S').asfreq()
+            df = df.resample(str(resample_dt)+'s').asfreq()
         else:
             raise NotImplementedError(">>>>> sim to obs resampling mode") 
         
