@@ -86,7 +86,7 @@ def runSensorTest(exp_start, t_0, t_end,
     print("Runtime: ", end-start)
 
     # compare to ground truth, generated using original code
-    test_data_dir = "./test_data/"
+    test_data_dir = "./test_data/old/"
     start_time_str = exp_start.replace(" ", "-").replace(":", "-")
     filename = test_data_dir + "ch4-sensor-n-" + str(sensor_puff.N_points) + "-sim-" + str(sim_dt) + "-puff-" + str(puff_dt) + "-exp-" + start_time_str + ".csv"
     ch4_old = np.loadtxt(filename, delimiter=",")
@@ -124,7 +124,7 @@ def runTest(exp_start, t_0, t_end,
     print("Runtime: ", end-start)
 
     # compare to ground truth, generated using original code
-    test_data_dir = "./test_data/"
+    test_data_dir = "./test_data/old/"
     start_time_str = exp_start.replace(" ", "-").replace(":", "-")
     filename = test_data_dir + "ch4-n-" + str(grid_puff.N_points) + "-sim-" + str(sim_dt) + "-puff-" + str(puff_dt) + "-exp-" + start_time_str + ".csv"
     ch4_old = np.loadtxt(filename, delimiter=",")
@@ -187,8 +187,8 @@ def general_tests():
     exp_start = pd.to_datetime(start_1)
     exp_end = pd.to_datetime(end_1)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -221,8 +221,8 @@ def general_tests():
     exp_start = pd.to_datetime(start_2)
     exp_end = pd.to_datetime(end_2)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -255,8 +255,8 @@ def general_tests():
     exp_start = pd.to_datetime(start_3)
     exp_end = pd.to_datetime(end_3)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -300,8 +300,8 @@ def non_square_tests():
     exp_start = pd.to_datetime(start_1)
     exp_end = pd.to_datetime(end_1)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -335,8 +335,8 @@ def non_square_tests():
     exp_start = pd.to_datetime(start_2)
     exp_end = pd.to_datetime(end_2)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -380,8 +380,8 @@ def varying_timestep_tests():
     exp_start = pd.to_datetime(start_1)
     exp_end = pd.to_datetime(end_1)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -417,8 +417,8 @@ def varying_timestep_tests():
     exp_start = pd.to_datetime(start_2)
     exp_end = pd.to_datetime(end_2)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -465,8 +465,8 @@ def sensor_tests():
     exp_start = pd.to_datetime(start_1)
     exp_end = pd.to_datetime(end_1)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -513,8 +513,8 @@ def sensor_tests():
     exp_start = pd.to_datetime(start_3)
     exp_end = pd.to_datetime(end_3)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -581,8 +581,8 @@ def unsafe_tests():
     exp_start = pd.to_datetime(start_1)
     exp_end = pd.to_datetime(end_1)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -626,8 +626,8 @@ def unsafe_tests():
     exp_start = pd.to_datetime(start_3)
     exp_end = pd.to_datetime(end_3)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
@@ -662,8 +662,8 @@ def unsafe_tests():
     exp_start = pd.to_datetime(start_3)
     exp_end = pd.to_datetime(end_3)
 
-    t_0 = exp_start.floor('T')
-    t_end = exp_end.floor('T')
+    t_0 = exp_start.floor('min')
+    t_end = exp_end.floor('min')
 
     idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
     idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
