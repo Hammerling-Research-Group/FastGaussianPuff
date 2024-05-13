@@ -42,17 +42,31 @@ There are a few restrictions imposed on the time parameters.
 To simulate below the resolution of `obs_dt`, wind data is interpolated to resolution `puff_dt` so that each puff may have a separate wind direction and speed.
 
 ## Installation instructions
-Dependencies:
-- Eigen C++ library
-- Make
-- Pybind11, numpy, and pandas python libraries
+We highly recommend using a [conda](https://docs.conda.io/en/latest/) environment. You can create the environment with
 
-1. Ensure dependencies are installed. Recommended to install Eigen using a package manger (e.g. apt, homebrew) and the python libraries using conda. There is an [environment file](environment.yml) containing a simple conda environment required to run the simulations. Some of the demos require other Python libraries such as matplotlib.
-2. Open a terminal in this directory and type `make` to compile the C++ code.
-3. You're done! Simply include `GaussianPuff.py` in your Python script to use.
+```shell
+$ conda env create -f environment.yml
+```
+
+Then, activate the environment with:
+
+```shell
+$ conda activate libmobility
+```
+
+The module works with pip. To install, use:
+```shell
+$ pip install .
+```
+
+Alternatively, you can install manually using CMake. You can compile and install everything with:
+
+```shell
+$ mkdir build && cd build
+$ cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
+$ make all install
+```
+It is advisable to install the library in the conda environment so that the python bindings are available. The environment variable $CONDA_PREFIX is set to the root of the conda environment.
 
 ### Other notes
-
-- Due to how the code is linked between Python and C++, you are unable to use Ctrl+C in a terminal to kill the simulation partway through. If you need to stop a simulation, kill the python process in the task manager or put the program in the background and kill it directly. On Linux, the shortcut to do this is Ctrl+Z followed by the command `kill %%`.
-
 - To run the tests you'll need the input data. It is currently stored on dropbox under fastGaussianPuff/test_data.
