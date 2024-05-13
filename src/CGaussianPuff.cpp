@@ -135,6 +135,8 @@ public:
 
         for(int p = 0; p < n_puffs; p++){
 
+            if (PyErr_CheckSignals() != 0) throw pybind11::error_already_set(); // catches ctrl+c signal from python
+
             // keeps track of current hour. needed to compute stability class
             current_min += puff_dt_minute;
             if(current_min > 60.0){
