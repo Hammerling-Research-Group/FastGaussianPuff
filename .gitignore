@@ -9,6 +9,7 @@ __pycache__
 .vscode
 cmap/
 *.png
+build/
 
 # other
 workspace/
