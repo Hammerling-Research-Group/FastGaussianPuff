@@ -45,7 +45,7 @@ jobs:
                 pip install -vv .
           shell: bash -el {0}
 
-  build:
+  build_linux:
     runs-on: ubuntu-latest
 
     steps:
