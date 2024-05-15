@@ -18,6 +18,7 @@ if(NOT Python3_SOABI)
   message(FATAL_ERROR "Python3_SOABI is empty. Set it to the output of 'python3-config --extension-suffix'")
 endif()
 
+# https://stackoverflow.com/questions/25421479/clang-and-undefined-symbols-when-building-a-library
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 endif()

@@ -38,11 +38,8 @@ class CMakeBuild(build_ext):
         # Set CXX compiler based on platform. This assumes that the compiler comes from cxx-compiler on conda-forge
         if sys.platform.startswith("darwin"):
             os.environ["CXX"] = os.environ["CONDA_PREFIX"] +  "/bin/clang++"
-            # cxxflags = os.environ.get("CXXFLAGS", "")
-            # os.environ["OSX_CXX_FLAGS"] = "-undefined dynamic_lookup"
         elif sys.platform.startswith("linux"):
             os.environ["CXX"] = os.environ["CONDA_PREFIX"] +  "/bin/g++"
-            # os.environ["OSX_CXX_FLAGS"] = ""
 
         build_args = ["--config", "Release"]
 
