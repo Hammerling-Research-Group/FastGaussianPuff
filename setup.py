@@ -3,6 +3,7 @@ from setuptools.command.build_ext import build_ext
 import subprocess
 import os
 import sys
+import re
 
 
 class CMakeExtension(Extension):
@@ -33,10 +34,29 @@ class CMakeBuild(build_ext):
             "-DCMAKE_BUILD_TYPE=" + ("Debug" if self.debug else "Release"),
         ]
 
+
+        # Set CXX compiler based on platform. This assumes that the compiler comes from cxx-compiler on conda-forge
+        if sys.platform.startswith("darwin"):
+            os.environ["CXX"] = os.environ["CONDA_PREFIX"] +  "/bin/clang++"
+        elif sys.platform.startswith("linux"):
+            os.environ["CXX"] = os.environ["CONDA_PREFIX"] +  "/bin/g++"
+
         build_args = ["--config", "Release"]
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
+
+        # Adding CMake arguments set as environment variable
+        # (needed e.g. to build for ARM OSx on conda-forge)
+        if "CMAKE_ARGS" in os.environ:
+            cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
+
+
+        if sys.platform.startswith("darwin"):
+            # Cross-compile support for macOS - respect ARCHFLAGS if set
+            archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
+            if archs:
+                cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
 
         subprocess.check_call(
             ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp
