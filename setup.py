@@ -39,10 +39,10 @@ class CMakeBuild(build_ext):
         if sys.platform.startswith("darwin"):
             os.environ["CXX"] = os.environ["CONDA_PREFIX"] +  "/bin/clang++"
             # cxxflags = os.environ.get("CXXFLAGS", "")
-            os.environ["OSX_CXX_FLAGS"] = "-undefined dynamic_lookup"
+            # os.environ["OSX_CXX_FLAGS"] = "-undefined dynamic_lookup"
         elif sys.platform.startswith("linux"):
             os.environ["CXX"] = os.environ["CONDA_PREFIX"] +  "/bin/g++"
-            os.environ["OSX_CXX_FLAGS"] = ""
+            # os.environ["OSX_CXX_FLAGS"] = ""
 
         build_args = ["--config", "Release"]
 
