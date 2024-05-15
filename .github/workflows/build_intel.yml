@@ -29,7 +29,6 @@ jobs:
         
     - name: List environment
       run: |
-        micromamba activate gp
         micromamba list
 
     - name: Configure and compile the library
