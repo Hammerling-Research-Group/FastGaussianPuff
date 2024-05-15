@@ -35,6 +35,7 @@ jobs:
 
     - name: Configure and compile the library
       run: |
+            micromamba activate gp
             mkdir build && cd build
             cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
             make all install
