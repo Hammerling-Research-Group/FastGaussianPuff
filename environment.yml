@@ -7,7 +7,7 @@ dependencies:
   - pandas
   - numpy
   - matplotlib
-  - gxx
+  - clangxx
   - make
   - cmake
   - eigen
