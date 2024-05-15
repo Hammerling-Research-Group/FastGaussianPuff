@@ -29,18 +29,20 @@ jobs:
         
     - name: List environment
       run: |
-        eval "$(micromamba shell hook --shell bash)"
-        micromamba activate
-        micromamba list
+            eval "$(micromamba shell hook --shell bash)"
+            micromamba activate gp
+            micromamba list
 
     - name: Configure and compile the library
       run: |
-        mkdir build && cd build
-        cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
-        make all install
+            eval "$(micromamba shell hook --shell bash)"
+            micromamba activate gp
+            mkdir build && cd build
+            cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
+            make all install
 
 
     - name: Install via pip
       run: |
-          pip install -vv .
-          shell: bash -el {0}
+            pip install -vv .
+      shell: bash -el {0}
