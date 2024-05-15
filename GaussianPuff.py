@@ -223,6 +223,13 @@ class GaussianPuff:
         # creates a timeseries at obs_dt resolution
         time_stamps = pd.date_range(sim_start, sim_end, self.n_obs)
 
+        # technically need a final value to interpolate between, so just extend timeseries
+        if len(wind_speeds) == self.n_obs - 1:
+            wind_speeds = np.append(wind_speeds, wind_speeds[-1])
+
+        if len(wind_directions) == self.n_obs - 1:
+            wind_directions = np.append(wind_directions, wind_directions[-1])
+
         # interpolate for wind_speeds and wind_directions:
         ## 1. convert ws & wd to x and y component of wind (denoted by u, v, respectively)
         ## 2. interpolate u and v
