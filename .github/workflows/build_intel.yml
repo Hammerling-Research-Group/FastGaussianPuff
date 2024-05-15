@@ -29,6 +29,7 @@ jobs:
         
     - name: List environment
       run: |
+        eval "$(micromamba shell hook --shell bash)"
         micromamba activate
         micromamba list
 
