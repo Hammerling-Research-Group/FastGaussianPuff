@@ -1,0 +1,48 @@
+name: intel_build
+
+
+on:
+    push:
+      branches: [ cmake ]
+    pull_request:
+      branches: [ main ]
+    schedule:
+      # Run every Sunday at midnight
+      - cron:  '0 0 * * 0'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        architecture: [x86_64]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install Mamba
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: environment.yml
+        cache-environment: false
+        cache-downloads: true
+
+    - name: List environment
+      run: |
+        micromamba activate gp
+        micromamba list
+
+    - name: Configure and compile the library
+      run: |
+        micromamba activate gp
+        mkdir build && cd build
+        cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
+        make all install
+
+
+        - name: Install via pip
+        run: |
+          micromamba activate gp
+          pip install -vv .
+        shell: bash -el {0}
