@@ -23,7 +23,6 @@ jobs:
     - name: Install Mamba
       uses: mamba-org/setup-micromamba@v1
       with:
-        init-shell: bash
         environment-file: environment.yml
         cache-environment: false
         cache-downloads: true
