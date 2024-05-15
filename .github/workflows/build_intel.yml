@@ -1,21 +1,20 @@
-name: intel_build
+name: build
 
 
 on:
     push:
       branches: [ cmake ]
-    pull_request:
-      branches: [ main ]
+    # pull_request:
+    #   branches: [ main ]
     schedule:
       # Run every Sunday at midnight
       - cron:  '0 0 * * 0'
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        architecture: [x86_64]
+
+
+  build_intel:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
@@ -24,9 +23,11 @@ jobs:
     - name: Install Mamba
       uses: mamba-org/setup-micromamba@v1
       with:
+        init-shell: bash
         environment-file: environment.yml
         cache-environment: false
         cache-downloads: true
+        post-cleanup: 'all'
 
     - name: List environment
       run: |
