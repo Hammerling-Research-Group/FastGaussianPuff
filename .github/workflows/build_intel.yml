@@ -27,8 +27,7 @@ jobs:
         environment-file: environment.yml
         cache-environment: false
         cache-downloads: true
-        post-cleanup: 'all'
-
+        
     - name: List environment
       run: |
         micromamba activate gp
