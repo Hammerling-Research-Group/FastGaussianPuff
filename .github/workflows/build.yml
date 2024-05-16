@@ -21,19 +21,18 @@ jobs:
     - name: Install Mamba
       uses: mamba-org/setup-micromamba@v1
       with:
+        init-shell: cmd.exe
         environment-file: environment.yml
         cache-environment: false
         cache-downloads: true
 
     - name: List environment
       run: |
-        eval "$(micromamba shell hook --shell bash)"
         micromamba activate gp
         micromamba list
 
     - name: Configure and compile the library
       run: |
-        eval "$(micromamba shell hook --shell bash)"
         micromamba activate gp
         mkdir build && cd build
         cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
@@ -41,7 +40,6 @@ jobs:
     - name: Install via pip
       run: |
             pip install -vv .
-      shell: bash -el {0}
 
   build_mac:
     runs-on: macos-latest
