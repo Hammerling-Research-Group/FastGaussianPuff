@@ -23,10 +23,9 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 endif()
 
-# https://gitlab.dune-project.org/core/dune-common/-/issues/201
-set_target_properties(${PYBIND11_MODULE_NAME} PROPERTIES SUFFIX ".so")
-
 add_library(CGaussianPuff.${Python3_SOABI} SHARED ${SOURCES})
+# https://gitlab.dune-project.org/core/dune-common/-/issues/201
+set_target_properties(CGaussianPuff.${Python3_SOABI} PROPERTIES SUFFIX ".so") # force .so suffix for mac
 set_target_properties(CGaussianPuff.${Python3_SOABI} PROPERTIES PREFIX "") # remove the lib prefix
 target_compile_options(CGaussianPuff.${Python3_SOABI} PRIVATE -fPIC -O3 -Wall)
 target_link_libraries(CGaussianPuff.${Python3_SOABI} PRIVATE pybind11::pybind11 Eigen3::Eigen)
