@@ -27,13 +27,13 @@ typedef std::chrono::system_clock::time_point TimePoint;
 
 class CGaussianPuff{
 protected:
-    double sim_dt, puff_dt;
-    double puff_duration;
-
     const Vector X, Y, Z;
     Vector X_rot, Y_rot;
     Matrix stackedGrid;
     int N_points;
+
+    double sim_dt, puff_dt;
+    double puff_duration;
 
     const Vector wind_speeds, wind_directions;
     Vector sigma_y, sigma_z;
@@ -745,7 +745,6 @@ private:
 
         double Xrt_dot_v = X0_rt.dot(v);
         double Xrt_dot_vp = X0_rt.dot(vp);
-        double norm_sq_Xrt = X0_rt.dot(X0_rt);
 
         double one_over_dx = 1/dx;
         double one_over_dy = 1/dy;
