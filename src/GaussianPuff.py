@@ -4,7 +4,7 @@ from math import floor
 import numpy as np
 import pandas as pd
 
-import FastGaussianPuff.CGaussianPuff as C_GP
+from FastGaussianPuff import CGaussianPuff as fGP
 
 class GaussianPuff:
     def __init__(self,
@@ -145,7 +145,7 @@ class GaussianPuff:
             self.Z = self.Z.ravel()
 
             # constructor for the c code
-            self.GPC = C_GP.GridGaussianPuff(
+            self.GPC = fGP.GridGaussianPuff(
                     self.X, self.Y, self.Z, 
                     self.nx, self.ny, self.nz, 
                     sim_dt, puff_dt, puff_duration,
@@ -164,7 +164,7 @@ class GaussianPuff:
                 self.Y.append(sensor[1])
                 self.Z.append(sensor[2])
 
-            self.GPC = C_GP.SensorGaussianPuff(
+            self.GPC = fGP.SensorGaussianPuff(
                 self.X, self.Y, self.Z, 
                 self.N_points,
                 sim_dt, puff_dt, puff_duration,
