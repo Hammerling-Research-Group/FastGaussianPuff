@@ -91,5 +91,6 @@ jobs:
 
     - name: Verify import of python class
       run: |
-        python -c "import GaussianPuff"
+        cd ./tests
+        python import_test.py
       shell: bash -el {0}
