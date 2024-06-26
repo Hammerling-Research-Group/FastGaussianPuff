@@ -12,43 +12,51 @@ on:
 
 jobs:
 
-  # build_mac:
-  #   runs-on: macos-latest
+  build_mac:
+    runs-on: macos-latest
     
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v2
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-  #   - name: Install Mamba
-  #     uses: mamba-org/setup-micromamba@v1
-  #     with:
-  #       environment-file: environment.yml
-  #       cache-environment: false
-  #       cache-downloads: true
+    - name: Install Mamba
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: environment.yml
+        cache-environment: false
+        cache-downloads: true
         
-  #   - name: List environment
-  #     run: |
-  #       eval "$(micromamba shell hook --shell bash)"
-  #       micromamba activate gp
-  #       micromamba list
+    - name: List environment
+      run: |
+        eval "$(micromamba shell hook --shell bash)"
+        micromamba activate gp
+        micromamba list
 
-  #   - name: Configure and compile the library
-  #     run: |
-  #       eval "$(micromamba shell hook --shell bash)"
-  #       micromamba activate gp
-  #       mkdir build && cd build
-  #       cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
-  #       make all install
+    - name: Configure and compile the library
+      run: |
+        eval "$(micromamba shell hook --shell bash)"
+        micromamba activate gp
+        mkdir build && cd build
+        cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
+        make all install
 
-  #   - name: Install via pip
-  #     run: |
-  #       pip install -vv .
-  #     shell: bash -el {0}
+    - name: Install via pip
+      run: |
+        pip install -vv .
+      shell: bash -el {0}
 
-  #   - name: Verify import
-  #     run: |
-  #       python -c "import FastGaussianPuff.CGaussianPuff"
-  #     shell: bash -el {0}
+    - name: Verify import of C code
+      run: |
+        python -c "import FastGaussianPuff.CGaussianPuff"
+      shell: bash -el {0}
+
+    - name: Verify import of python class
+      run: |
+        pytest -sv tests/test_import.py
+        cd tests/
+        pytest -sv test_import.py
+        cd ..
+      shell: bash -el {0}
 
   build_linux:
     runs-on: ubuntu-latest
