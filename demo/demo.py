@@ -8,7 +8,7 @@ code_dir = '../'
 sys.path.insert(0, code_dir)
 
 from utilities import wind_synthesizer
-from GaussianPuff import GaussianPuff as GP
+from FastGaussianPuff import GaussianPuff as GP
 
 def main():
     # set simulation parameters

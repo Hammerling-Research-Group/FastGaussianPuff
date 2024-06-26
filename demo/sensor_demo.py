@@ -7,7 +7,7 @@ code_dir = '../'
 sys.path.insert(0, code_dir)
 
 from utilities import wind_synthesizer
-from GaussianPuff import GaussianPuff as sensor_puff
+from FastGaussianPuff import GaussianPuff as GP
 
 # set simulation parameters
 # IMPORTANT: obs_dt must be a positive integer multiple of sim_dt, and both sim_dt and puff_dt must be integers
@@ -41,7 +41,7 @@ sensor_coordinates = [[488164.98285821447, 4493931.649887275, 2.4],
     [488106.145508258, 4493896.167438727, 2.4],
     [488133.15254321764, 4493932.355431944, 2.4]]
 
-sp = sensor_puff(obs_dt=obs_dt, sim_dt=sim_dt, puff_dt=puff_dt,
+sp = GP(obs_dt=obs_dt, sim_dt=sim_dt, puff_dt=puff_dt,
                  simulation_start=start, simulation_end=end,
                  source_coordinates=source_coordinates, emission_rates=emission_rate,
                  wind_speeds=wind_speeds, wind_directions=wind_directions,
