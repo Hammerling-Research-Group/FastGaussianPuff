@@ -92,4 +92,7 @@ jobs:
     - name: Verify import of python class
       run: |
         pytest -sv tests/test_import.py
+        cd tests/
+        pytest -sv test_import.py
+        cd ..
       shell: bash -el {0}
