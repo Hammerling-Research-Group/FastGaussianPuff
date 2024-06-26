@@ -84,7 +84,12 @@ jobs:
         pip install -vv .
       shell: bash -el {0}
 
-    - name: Verify import
+    - name: Verify import of C code
       run: |
         python -c "import FastGaussianPuff.CGaussianPuff"
+      shell: bash -el {0}
+
+    - name: Verify import of python class
+      run: |
+        python -c "import GaussianPuff"
       shell: bash -el {0}
