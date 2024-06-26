@@ -7,7 +7,7 @@ code_dir = '../'
 sys.path.insert(0, code_dir)
 
 from utilities import wind_synthesizer
-from GaussianPuff import GaussianPuff as GP
+from FastGaussianPuff import GaussianPuff as GP
 
 # source: 4T-11
 start_1 = '2022-02-22 01:33:22'
