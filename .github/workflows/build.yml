@@ -97,7 +97,7 @@ jobs:
         python -c "import FastGaussianPuff.CGaussianPuff"
       shell: bash -el {0}
 
-    - name: Verify import of python class
+    - name: Verify import of python classes
       run: |
         pytest -sv tests/test_import.py
         cd tests/
