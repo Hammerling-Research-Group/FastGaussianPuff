@@ -61,14 +61,13 @@ class PuffParser:
       total_ch4 = 0
 
       sensors = list(self.sensor_coords.values())
-
       for j in range(n_sources):
         s_ind = exp_sources[j]
-        source_coords = [self.source_coords[s_ind]]
+        coords = [self.source_coords[s_ind]]
 
         gp = GP(self.wind_dt, self.sim_dt, self.puff_dt,
                 start_time, end_time,
-                source_coords, rate,
+                coords, [rate[j]],
                 ws, wd,
                 output_dt=self.output_dt,
                 using_sensors=True, sensor_coordinates=sensors)
