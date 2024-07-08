@@ -46,7 +46,7 @@ class PuffParser:
       start_time = pd.to_datetime(start_times[i]).floor('min')
       end_time = pd.to_datetime(end_times[i]).floor('min')
 
-      out_fname = self.output_dir + start_time.strftime('%d-%m-%y_%H:%M') + '_exp_' + str(i) + '.csv'
+      out_fname = self.output_dir + start_time.strftime('%m-%d-%y_%H:%M') + '_exp_' + str(i) + '.csv'
       # out_name = self.output_dir + 'exp' + str(i) + '.csv'
 
       ws = self.wind_file[(self.wind_file['timestamp'] >= start_time) & (self.wind_file['timestamp'] <= end_time)]

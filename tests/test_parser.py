@@ -38,7 +38,7 @@ def test_dlq_setup():
         using_sensors=True, sensor_coordinates=sensors)
   gp.simulate()
 
-  parser_ch4 = pd.read_csv('./parser_out/01-02-22_09:59_exp_0.csv')
+  parser_ch4 = pd.read_csv('./parser_out/02-01-22_09:59_exp_0.csv')
 
   for i in range(0, len(sensors)):
     diff = np.abs(parser_ch4[names[i]].values - gp.ch4_obs[:,i])
@@ -53,7 +53,7 @@ def test_dlq_setup():
         using_sensors=True, sensor_coordinates=sensors)
   gp.simulate()
 
-  parser_ch4 = pd.read_csv('./parser_out/01-02-22_09:59_exp_3.csv')
+  parser_ch4 = pd.read_csv('./parser_out/02-01-22_09:59_exp_3.csv')
   for i in range(0, len(sensors)):
     diff = np.abs(parser_ch4[names[i]].values - gp.ch4_obs[:,i])
     assert np.linalg.norm(diff) < 1e-3
