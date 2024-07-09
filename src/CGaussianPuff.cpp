@@ -185,7 +185,7 @@ private:
         // rotates X and Y grids, stores in X_rot and Y_rot
         rotatePoints(X_rot, Y_rot);
 
-        char stability_class = stabilityClassifier(ws, hour);
+        std::vector<char> stability_class = stabilityClassifier(ws, hour);
 
         // gets sigma coefficients and stores in sigma_{y,z} class member vars
         getSigmaCoefficients(stability_class, X_rot);
@@ -401,24 +401,20 @@ private:
     Returns:
         stability_class: character A-F representing a Pasquill stability class
     */
-    char stabilityClassifier(double wind_speed, int hour, int day_start=7, int day_end=19) {
+    std::vector<char> stabilityClassifier(double wind_speed, int hour, int day_start=7, int day_end=19) {
 
         bool is_day = (hour >= day_start) && (hour <= day_end);
-        char stab_class;
-
         if (wind_speed < 2) {
-            stab_class = is_day ? 'A' : 'E';
+            return is_day ? std::vector<char>{'A', 'B'} : std::vector<char>{'E', 'F'};
         } else if (wind_speed < 3) {
-            stab_class = is_day ? 'B' : 'E';
+            return is_day ? std::vector<char>{'B'} : std::vector<char>{'E', 'F'};
         } else if (wind_speed < 5) {
-            stab_class = is_day ? 'C' : 'E';
+            return is_day ? std::vector<char>{'B', 'C'} : std::vector<char>{'D', 'E'};
         } else if (wind_speed < 6) {
-            stab_class = is_day ? 'C' : 'D';
+            return is_day ? std::vector<char>{'C', 'D'} : std::vector<char>{'D'};
         } else {
-            stab_class = 'D';
+            return std::vector<char>{'D'};
         }
-
-        return stab_class;
     }
 
     /* Gets dispersion coefficients (sigma_{y,z}) for the entire grid.
@@ -431,20 +427,29 @@ private:
     Returns:
         None, but sigma_y and sigma_z class variables are filled with the dispersion coefficients.
     */
-    void getSigmaCoefficients(char stability_class, Vector X_rot){
+    void getSigmaCoefficients(std::vector<char> stability_class, Vector X_rot){
         X_rot = X_rot.array() * 0.001; // convert to km
 
+        int n_stab = stability_class.size();
+
         for(int i = 0; i < X_rot.size(); i++){
-            int flag = 0;
-            double a, b, c, d;
 
             double x = X_rot[i];
+
+            double sigma_y_temp;
+            double sigma_z_temp;
+
+            for(int j = 0; j < n_stab; j++){
+                char stab = stability_class[j];
+                int flag = 0;
+                double a, b, c, d;
 
             if (x <= 0) {
                 sigma_y[i] = -1;
                 sigma_z[i] = -1;
+                break; // don't need to average if upwind
             } else {
-                if (stability_class == 'A') {
+                if (stab == 'A') {
                     if (x < 0.1) {
                         a = 122.800;
                         b = 0.94470;
@@ -474,7 +479,7 @@ private:
                     }
                     c = 24.1670;
                     d = 2.5334;
-                } else if (stability_class == 'B') {
+                } else if (stab == 'B') {
                     if (x < 0.2) {
                         a = 90.673;
                         b = 0.93198;
@@ -487,12 +492,12 @@ private:
                     }
                     c = 18.3330;
                     d = 1.8096;
-                } else if (stability_class == 'C') {
+                } else if (stab == 'C') {
                     a = 61.141;
                     b = 0.91465;
                     c = 12.5000;
                     d = 1.0857;
-                } else if (stability_class == 'D') {
+                } else if (stab == 'D') {
                     if (x < 0.3) {
                         a = 34.459;
                         b = 0.86974;
@@ -514,7 +519,7 @@ private:
                     }
                     c = 8.3330;
                     d = 0.72382;
-                } else if (stability_class == 'E') {
+                } else if (stab == 'E') {
                     if (x < 0.1) {
                         a = 24.260;
                         b = 0.83660;
@@ -545,7 +550,7 @@ private:
                     }
                     c = 6.2500;
                     d = 0.54287;
-                } else if (stability_class == 'F') {
+                } else if (stab == 'F') {
                     if (x < 0.2) {
                         a = 15.209;
                         b = 0.81558;
@@ -585,13 +590,18 @@ private:
 
                 if (flag == 0) {
                     double Theta = 0.017453293 * (c - d * std::log(x)); // in radians
-                    sigma_y[i] = 465.11628 * x * std::tan(Theta); // in meters
-                    sigma_z[i] = a * std::pow(x, b); // in meters
-                    sigma_z[i] = std::min(sigma_z[i], 5000.0);
+                    sigma_y_temp = 465.11628 * x * std::tan(Theta); // in meters
+                    sigma_z_temp = a * std::pow(x, b); // in meters
+                    sigma_z_temp = std::min(sigma_z_temp, 5000.0);
                 } else {
-                    sigma_z[i] = 5000.0;
+                    sigma_z_temp = 5000.0;
                 }
+                }
+                sigma_y[i] += sigma_y_temp;
+                sigma_z[i] += sigma_z_temp;
             }
+            sigma_y[i] /= n_stab;
+            sigma_z[i] /= n_stab;
         }
     }
 
