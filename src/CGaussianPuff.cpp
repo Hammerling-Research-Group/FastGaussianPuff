@@ -433,6 +433,8 @@ private:
         int n_stab = stability_class.size();
 
         for(int i = 0; i < X_rot.size(); i++){
+            sigma_y[i] = 0;
+            sigma_z[i] = 0;
 
             double x = X_rot[i];
 
@@ -587,7 +589,7 @@ private:
                 } else {
                     throw std::invalid_argument("Invalid stability class.");
                 }
-
+    
                 if (flag == 0) {
                     double Theta = 0.017453293 * (c - d * std::log(x)); // in radians
                     sigma_y_temp = 465.11628 * x * std::tan(Theta); // in meters
