@@ -401,7 +401,7 @@ private:
     Returns:
         stability_class: character A-F representing a Pasquill stability class
     */
-    std::vector<char> stabilityClassifier(double wind_speed, int hour, int day_start=7, int day_end=19) {
+    std::vector<char> stabilityClassifier(double wind_speed, int hour, int day_start=7, int day_end=18) {
 
         bool is_day = (hour >= day_start) && (hour <= day_end);
         if (wind_speed < 2) {
