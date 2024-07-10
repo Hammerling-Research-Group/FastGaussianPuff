@@ -76,7 +76,14 @@ class PuffParser:
         total_ch4 = gp.ch4_obs + total_ch4
 
       df_ch4 = pd.DataFrame(total_ch4, columns=list(self.sensor_coords.keys()))
-      time_series = pd.date_range(start_time, end_time, periods=gp.n_out)
+
+      z = np.zeros((1, len(list(self.sensor_coords.keys()))))
+      df_ch4 = pd.concat([pd.DataFrame(z, columns=list(self.sensor_coords.keys())), df_ch4], ignore_index=True)
+
+      gp_out_res = gp.output_dt # seconds
+      td = pd.Timedelta(gp_out_res, unit='seconds')
+      
+      time_series = pd.date_range(start_time, end_time + td, periods=gp.n_out)
       df_ch4.insert(0, 'timestamp', time_series)
       pd.DataFrame(df_ch4).to_csv(out_fname, index=False)
 
