@@ -83,7 +83,7 @@ class PuffParser:
       gp_out_res = gp.output_dt # seconds
       td = pd.Timedelta(gp_out_res, unit='seconds')
       
-      time_series = pd.date_range(start_time, end_time + td, periods=gp.n_out)
+      time_series = pd.date_range(start_time, end_time + td, periods=gp.n_out + 1)
       df_ch4.insert(0, 'timestamp', time_series)
       pd.DataFrame(df_ch4).to_csv(out_fname, index=False)
 
