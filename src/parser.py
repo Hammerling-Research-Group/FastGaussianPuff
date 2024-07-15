@@ -1,29 +1,27 @@
 import pandas as pd
 import numpy as np
 import ast
+import os
 
 from FastGaussianPuff import GaussianPuff as GP
 
 class PuffParser:
-
-  ZONE_LETTERS = ["C", "D", "E", "F", "G", "H", "J",
-            "K", "L", "M", "N", "P", "Q", "R",
-            "S", "T", "U", "V", "W", "X", "X"]
 
   def __init__(self, input_file):
     self.input_file = input_file
     self.options = {}
     self.parse_options()
 
-    # 1. read in input files from paths
-    self.source_file = pd.read_csv(self.options['source_file'])
-    self.sensor_file = pd.read_csv(self.options['sensor_file'])
+    parent_dir = os.path.dirname(self.input_file) + "/"
 
-    self.wind_file = pd.read_csv(self.options['wind_file'])
-    self.wind_file['timestamp'] = pd.to_datetime(self.wind_file['timestamp'])
+    self.source_file = pd.read_csv(parent_dir + self.options['source_file'])
+    self.sensor_file = pd.read_csv(parent_dir + self.options['sensor_file'])
+
+    self.wind_file = pd.read_csv(parent_dir + self.options['wind_file'])
+    self.wind_file['timestamp'] = pd.to_datetime(self.wind_file['timestamp'], utc=True)
     
-    self.exp_file = pd.read_csv(self.options['experiments_file'])
-    self.output_dir = self.options['output_dir']
+    self.exp_file = pd.read_csv(parent_dir + self.options['experiments_file'])
+    self.output_dir = parent_dir + self.options['output_dir']
 
     self.colnames = ast.literal_eval(self.options['coordinate_columns'])
 
@@ -46,13 +44,19 @@ class PuffParser:
       start_time = pd.to_datetime(start_times[i]).floor('min')
       end_time = pd.to_datetime(end_times[i]).floor('min')
 
-      out_fname = self.output_dir + start_time.strftime('%m-%d-%y_%H:%M') + '_exp_' + str(i) + '.csv'
+      
+      out_time_str = start_time.tz_localize(None).strftime('%m-%d-%y_%H:%M')
+      out_fname = self.output_dir + out_time_str + '_exp_' + str(i) + '.csv'
       # out_name = self.output_dir + 'exp' + str(i) + '.csv'
 
       ws = self.wind_file[(self.wind_file['timestamp'] >= start_time) & (self.wind_file['timestamp'] <= end_time)]
       ws = ws['wind_speed'].values
       wd = self.wind_file[(self.wind_file['timestamp'] >= start_time) & (self.wind_file['timestamp'] <= end_time)]
       wd = wd['wind_dir'].values
+
+      # C code expects no timezone
+      start_time = start_time.tz_localize(None)
+      end_time = end_time.tz_localize(None)
 
       exp_sources = ast.literal_eval(source_names[i])
       rate = ast.literal_eval(rates[i])
@@ -150,6 +154,10 @@ class PuffParser:
           elif longitude <= 42:
               return 37
       return int((longitude + 180) / 6) + 1
+
+  ZONE_LETTERS = ["C", "D", "E", "F", "G", "H", "J",
+          "K", "L", "M", "N", "P", "Q", "R",
+          "S", "T", "U", "V", "W", "X", "X"]
 
   def latitude_to_zone_letter(self,latitude):
       latitude = int(latitude)
