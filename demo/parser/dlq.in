@@ -1,0 +1,11 @@
+source_file ./data/ADED_sources.csv
+sensor_file ./data/ADED_sensors.csv
+wind_file ./data/wind_median.csv
+experiments_file ./in/exp_dlq.csv
+wind_dt 60 #in [s], expected to be uniform for whole file
+output_dir ./out/
+output_dt 60 # temporal resolution of simulation output in [s]
+coordinate_system geodetic # can be either geodetic or cartesian
+coordinate_columns ['id','lat','lon','height'] # names of the columns for coordinates
+sim_dt 1
+puff_dt 1
