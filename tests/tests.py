@@ -3,23 +3,29 @@ import sys
 import pandas as pd
 import numpy as np
 
-code_dir = '../'
-sys.path.insert(0, code_dir)
+# code_dir = '../'
+# sys.path.insert(0, code_dir)
 
-from utilities import wind_synthesizer
+# from utilities import wind_synthesizer
 from FastGaussianPuff import GaussianPuff as GP
 
 # source: 4T-11
-start_1 = '2022-02-22 01:33:22'
-end_1 = '2022-02-22 03:33:23'
+start_1 = '2022-02-22 01:33:22-07:00'
+end_1 = '2022-02-22 03:33:23-07:00'
+start_1 = pd.to_datetime(start_1, utc=True)
+end_1 = pd.to_datetime(end_1, utc=True)
 
 # source: 5S-27
-start_2 = '2022-02-26 21:36:00'
-end_2 = '2022-02-26 23:07:00'
+start_2 = '2022-02-26 21:36:00-07:00'
+end_2 = '2022-02-26 23:07:00-07:00'
+start_2 = pd.to_datetime(start_2, utc=True)
+end_2 = pd.to_datetime(end_2, utc=True)
 
 # source: 4W-47
-start_3 = '2022-04-27 03:49:09'
-end_3 = '2022-04-27 08:04:09'
+start_3 = '2022-04-27 03:49:09-06:00'
+end_3 = '2022-04-27 08:04:09-06:00'
+start_3 = pd.to_datetime(start_3, utc=True)
+end_3 = pd.to_datetime(end_3, utc=True)
 
 num_tests = 0
 tests_passed = 0
@@ -28,13 +34,12 @@ failed_tests = []
 
 
 # Load in data
-data_dir = './test_data/'
-
-# 1-minute resolution wind data
-df_ws_1min = pd.read_csv(data_dir + 'df_ws_1min_METEC_ADET.csv') 
-df_wd_1min = pd.read_csv(data_dir + 'df_wd_1min_METEC_ADET.csv')
-df_ws_1min['time_stamp.mountain'] = pd.to_datetime(df_ws_1min['time_stamp.mountain'])
-df_wd_1min['time_stamp.mountain'] = pd.to_datetime(df_wd_1min['time_stamp.mountain'])
+data_dir = './parser/data/'
+df_wind = pd.read_csv(data_dir + 'wind_median.csv')
+df_wind['timestamp'] = pd.to_datetime(df_wind['timestamp'], utc=True)
+ws_syn = df_wind['wind_speed'].values
+wd_syn = df_wind['wind_dir'].values
+time_stamp_wind = df_wind['timestamp']
 
 
 # Data processing
@@ -50,14 +55,15 @@ colnames = {'name' : 'name',
 'emission_rate' : 'emission_rate.kg/hr'}
 
 # synethize wind data- combines wind data from multiple sensors into one timeseries
-if df_ws_1min.shape == df_wd_1min.shape:
-    wind_syn_mode, wind_sensor = 'circular_mean', None
-    ws_syn, wd_syn = wind_synthesizer(df_ws_1min, df_wd_1min, 
-                                    wind_syn_mode, wind_sensor = wind_sensor,
-                                    colname_t = colnames['t'])
-    time_stamp_wind = df_ws_1min[colnames['t']].to_list()
-else:
-    raise ValueError(">>>>> df_ws and df_wd must have the same shape.") 
+# if df_ws_1min.shape == df_wd_1min.shape:
+#     wind_syn_mode, wind_sensor = 'circular_mean', None
+#     ws_syn, wd_syn = wind_synthesizer(df_ws_1min, df_wd_1min, 
+#                                     wind_syn_mode, wind_sensor = wind_sensor,
+#                                     colname_t = colnames['t'])
+#     time_stamp_wind = df_ws_1min[colnames['t']].to_list()
+# else:
+#     raise ValueError(">>>>> df_ws and df_wd must have the same shape.") 
+
 
 def runSensorTest(exp_start, t_0, t_end, 
             wind_speeds, wind_directions, 
@@ -67,6 +73,9 @@ def runSensorTest(exp_start, t_0, t_end,
             unsafe=False
             ):
     
+    t_0 = t_0.tz_convert("America/Denver")
+    t_end = t_end.tz_convert("America/Denver")
+
     eps = 1e-7
 
     sensor_puff = GP(obs_dt, sim_dt, puff_dt,
@@ -85,11 +94,16 @@ def runSensorTest(exp_start, t_0, t_end,
     end = time.time()
     print("Runtime: ", end-start)
 
-    # compare to ground truth, generated using original code
-    test_data_dir = "./test_data/old/"
+    # compare to version generated using previous iteration of code
+    test_data_dir = "./test_data/new/"
+    exp_start = exp_start.tz_convert("America/Denver")
+    exp_start = exp_start.tz_localize(None)
+    exp_start = str(exp_start)
     start_time_str = exp_start.replace(" ", "-").replace(":", "-")
     filename = test_data_dir + "ch4-sensor-n-" + str(sensor_puff.N_points) + "-sim-" + str(sim_dt) + "-puff-" + str(puff_dt) + "-exp-" + start_time_str + ".csv"
     ch4_old = np.loadtxt(filename, delimiter=",")
+    # np.savetxt(filename, ch4, delimiter=",")
+    # return
 
     return check_test(ch4_old, ch4, unsafe)
 
@@ -101,10 +115,16 @@ def runTest(exp_start, t_0, t_end,
             unsafe = False
             ):
     
+    t_0 = t_0.tz_convert("America/Denver")
+    t_end = t_end.tz_convert("America/Denver")
+    
     if unsafe:
         eps = 1e-5
     else:
-        eps = 1e-7
+        eps = 1e-9
+
+    t_0 = t_0.tz_localize(None)
+    t_end = t_end.tz_localize(None)
 
     grid_puff = GP(obs_dt, sim_dt, puff_dt,
                 t_0, t_end,
@@ -124,10 +144,15 @@ def runTest(exp_start, t_0, t_end,
     print("Runtime: ", end-start)
 
     # compare to ground truth, generated using original code
-    test_data_dir = "./test_data/old/"
+    test_data_dir = "./test_data/new/"
+    exp_start = exp_start.tz_convert("America/Denver")
+    exp_start = exp_start.tz_localize(None)
+    exp_start = str(exp_start)
     start_time_str = exp_start.replace(" ", "-").replace(":", "-")
     filename = test_data_dir + "ch4-n-" + str(grid_puff.N_points) + "-sim-" + str(sim_dt) + "-puff-" + str(puff_dt) + "-exp-" + start_time_str + ".csv"
     ch4_old = np.loadtxt(filename, delimiter=",")
+    # np.savetxt(filename, ch4, delimiter=",")
+    # return
 
     return check_test(ch4_old, ch4, unsafe=unsafe)
 
@@ -148,7 +173,7 @@ def check_test(ch4_old, ch4, unsafe=False):
         if np.max(ch4_old[t]) < 1e-3:
             continue
 
-        max_err = np.max(ch4_old[t].ravel() - ch4[t].ravel())/np.max(ch4_old[t])
+        max_err = np.max(abs(ch4_old[t].ravel() - ch4[t].ravel()))/np.max(ch4_old[t])
 
         if np.isnan(max_err):
             print(f"ERROR: NAN present ch4 array at time {t}")
@@ -190,8 +215,8 @@ def general_tests():
     t_0 = exp_start.floor('min')
     t_end = exp_end.floor('min')
 
-    idx_0 = pd.Index(time_stamp_wind).get_indexer([exp_start], method='nearest')[0]
-    idx_end = pd.Index(time_stamp_wind).get_indexer([exp_end], method='nearest')[0]
+    idx_0 = pd.Index(time_stamp_wind).get_indexer([t_0], method='nearest')[0]
+    idx_end = pd.Index(time_stamp_wind).get_indexer([t_end], method='nearest')[0]
     wind_speeds = ws_syn[idx_0 : idx_end+1]
     wind_directions = wd_syn[idx_0 : idx_end+1]
 
