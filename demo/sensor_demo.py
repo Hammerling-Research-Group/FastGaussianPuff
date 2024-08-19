@@ -3,10 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
 
-code_dir = '../'
-sys.path.insert(0, code_dir)
-
-from utilities import wind_synthesizer
 from FastGaussianPuff import GaussianPuff as GP
 
 # set simulation parameters
