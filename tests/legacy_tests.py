@@ -3,8 +3,8 @@ import sys
 import pandas as pd
 import numpy as np
 
-# code_dir = '../'
-# sys.path.insert(0, code_dir)
+# # code_dir = '../'
+# # sys.path.insert(0, code_dir)
 
 # from utilities import wind_synthesizer
 from FastGaussianPuff import GaussianPuff as GP
@@ -16,8 +16,10 @@ start_1 = pd.to_datetime(start_1, utc=True)
 end_1 = pd.to_datetime(end_1, utc=True)
 
 # source: 5S-27
-start_2 = '2022-02-26 21:36:00-07:00'
-end_2 = '2022-02-26 23:07:00-07:00'
+start_2 = '2022-02-26 21:36:00-07:00-07:00'
+end_2 = '2022-02-26 23:07:00-07:00-07:00'
+start_2 = pd.to_datetime(start_2, utc=True)
+end_2 = pd.to_datetime(end_2, utc=True)
 start_2 = pd.to_datetime(start_2, utc=True)
 end_2 = pd.to_datetime(end_2, utc=True)
 
@@ -95,7 +97,7 @@ def runSensorTest(exp_start, t_0, t_end,
     print("Runtime: ", end-start)
 
     # compare to version generated using previous iteration of code
-    test_data_dir = "./test_data/new/"
+    test_data_dir = "./test_data/"
     exp_start = exp_start.tz_convert("America/Denver")
     exp_start = exp_start.tz_localize(None)
     exp_start = str(exp_start)
@@ -144,7 +146,7 @@ def runTest(exp_start, t_0, t_end,
     print("Runtime: ", end-start)
 
     # compare to ground truth, generated using original code
-    test_data_dir = "./test_data/new/"
+    test_data_dir = "./test_data/"
     exp_start = exp_start.tz_convert("America/Denver")
     exp_start = exp_start.tz_localize(None)
     exp_start = str(exp_start)
@@ -165,6 +167,18 @@ def check_test(ch4_old, ch4, unsafe=False):
         tol = 0.05
     else:
         tol = 0.001
+
+    # import matplotlib.pyplot as plt
+
+    # # Plotting ch4_old and ch4
+    # plt.plot(np.max(ch4_old, axis=1), label=f"ch4_old at time")
+    # plt.plot(np.max(ch4, axis=1), label=f"ch4 at time", linestyle=':')
+
+    # plt.legend()
+    # plt.xlabel("Grid Point")
+    # plt.ylabel("CH4 Concentration")
+    # plt.title("Comparison of ch4_old and ch4")
+    # plt.show()
 
     # stop one step short of end: original code doesn't actually produce results for final timestep, so skip it
     for t in range(0, len(ch4_old)-1):
@@ -219,6 +233,8 @@ def general_tests():
     idx_end = pd.Index(time_stamp_wind).get_indexer([t_end], method='nearest')[0]
     wind_speeds = ws_syn[idx_0 : idx_end+1]
     wind_directions = wd_syn[idx_0 : idx_end+1]
+
+    # breakpoint()
 
     print("-----------------------------------------")
     print("RUNNING TEST ", num_tests)
