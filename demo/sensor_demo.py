@@ -1,4 +1,3 @@
-import sys
 import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
@@ -41,8 +40,11 @@ sp = GP(obs_dt=obs_dt, sim_dt=sim_dt, puff_dt=puff_dt,
                  quiet=True # change to false for progress information
 )
 
+print("STARTING SIMULATION")
 sp.simulate()
+print("SIMULATION FINISHED")
 
+print("MAKING PLOTS")
 #%% plotting
 t, n_sensors = np.shape(sp.ch4_obs) # (time, sensors)
 sensor_names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
@@ -70,4 +72,5 @@ for i in range(0,n_sensors):
     ax[row][col].set_title(sensor_names[i])
 
 
+print("CHECK FILE demo_sensors.png")
 fig.savefig("demo_sensors.png", format="png", dpi=500, bbox_inches="tight")
