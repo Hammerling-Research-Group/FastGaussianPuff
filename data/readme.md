@@ -1,1 +1,0 @@
-Where all data is accessed from. Until I hear if I can include wind data from sensors, you can find a data directory on dropbox under methane_monitoring/fastGaussianPuff. Copy that directory and add the contents of that directory to here if you want the data for the demo and tests.
