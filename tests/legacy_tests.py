@@ -29,7 +29,7 @@ failed_tests = []
 
 
 # Load in data
-data_dir = './parser/data/'
+data_dir = './input_data/'
 df_wind = pd.read_csv(data_dir + 'wind_median.csv')
 df_wind['timestamp'] = pd.to_datetime(df_wind['timestamp'], utc=True)
 ws_syn = df_wind['wind_speed'].values
