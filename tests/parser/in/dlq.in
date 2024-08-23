@@ -1,6 +1,6 @@
-source_file ../data/ADED_sources.csv
-sensor_file ../data/ADED_sensors.csv
-wind_file ../data/wind_median.csv
+source_file ../../input_data/ADED_sources.csv
+sensor_file ../../input_data/ADED_sensors.csv
+wind_file ../../input_data/wind_median.csv
 experiments_file ./exp_dlq.csv
 wind_dt 60 #in [s], expected to be uniform for whole file
 output_dir ../out/

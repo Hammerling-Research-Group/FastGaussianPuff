@@ -11,7 +11,7 @@ def test_dlq_setup():
   p.run_exp()
 
   # manually set up experiment and compare to parser output for 2 samples
-  dat_dir = './parser/data/'
+  dat_dir = './input_data/'
   sensors = [[488164.98285821447,4493931.649887275,2.4],
             [488198.08502694493,4493932.618594243,2.4],
               [488226.9012860443,4493887.916890612,2.4],
@@ -69,7 +69,7 @@ def test_multisource_setup():
 
 
   # manually set up experiment and compare to parser output for 2 samples
-  dat_dir = './parser/data/'
+  dat_dir = './input_data/'
   sensors = [[488164.98285821447,4493931.649887275,2.4],
             [488198.08502694493,4493932.618594243,2.4],
               [488226.9012860443,4493887.916890612,2.4],
