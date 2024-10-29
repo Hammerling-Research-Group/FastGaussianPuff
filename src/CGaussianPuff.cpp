@@ -28,15 +28,13 @@ typedef std::chrono::system_clock::time_point TimePoint;
 class CGaussianPuff{
 protected:
     const Vector X, Y, Z;
-    Vector X_rot, Y_rot;
-    Matrix stackedGrid;
+    Vector X_centered, Y_centered;
     int N_points;
 
     double sim_dt, puff_dt;
     double puff_duration;
 
     const Vector wind_speeds, wind_directions;
-    Vector sigma_y, sigma_z;
 
     double thresh_xy_max, thresh_z_max;
 
@@ -90,17 +88,12 @@ public:
     source_coordinates(source_coordinates), emission_strengths(emission_strengths),
     conversion_factor(conversion_factor), exp_tol(exp_tol), quiet(quiet) {
 
-        stackedGrid.resize(2, X.size());
-
         if(unsafe){
             if (!quiet) std::cout << "RUNNING IN UNSAFE MODE\n";
             this->exp = &fastExp; 
         } else {
             this->exp = [](double x){return std::exp(x);};
         }
-
-        sigma_y = Vector(N_points);
-        sigma_z = Vector(N_points);
 
         this->sim_start = std::chrono::system_clock::to_time_t(sim_start);
         this->sim_end = std::chrono::system_clock::to_time_t(sim_end);
@@ -179,20 +172,36 @@ private:
         cosine = cos(theta);
         sine = sin(theta);
 
-        Vector X_rot(X.size());
-        Vector Y_rot(Y.size());
-
-        // rotates X and Y grids, stores in X_rot and Y_rot
-        rotatePoints(X_rot, Y_rot);
 
         std::vector<char> stability_class = stabilityClassifier(ws, hour);
 
-        // gets sigma coefficients and stores in sigma_{y,z} class member vars
-        getSigmaCoefficients(stability_class, X_rot);
+        GaussianPuffEquation(q, ws,stability_class,ch4);
+    }
 
-        GaussianPuffEquation(q, ws,
-                            X_rot, Y_rot,
-                            ch4);
+    void getPuffCenteredSigmas(std::vector<double>& sigma_y, std::vector<double>& sigma_z,
+                                         int n_time_steps, double ws, std::vector<char> stability_class){
+        std::vector<double> downwind_dists = std::vector<double>(n_time_steps+1);
+
+        double shift_per_step = ws*sim_dt;
+        downwind_dists[0] = 0;
+        for(int i = 1; i <= n_time_steps; i++){
+            downwind_dists[i] = downwind_dists[i-1] + shift_per_step;
+        }
+
+        getSigmaCoefficients(sigma_y, sigma_z, stability_class, downwind_dists);
+    }
+
+    Vector2d calculateExitLocation(double ws){
+
+        Vector2d box_min(x_min, y_min);
+        Vector2d box_max(x_max, y_max);
+        Vector2d origin(0,0);
+        Vector2d rayDir(cosine, -sine);
+        Vector2d invRayDir = rayDir.cwiseInverse();
+
+        Vector2d exit_times = AABB(box_min, box_max, origin, invRayDir);
+
+        return exit_times[1]*rayDir;
     }
 
     /* Evaluates the Gaussian Puff equation on the grids. 
@@ -207,14 +216,23 @@ private:
         none, but the concentrations are added into the concentration array.
     */
     void GaussianPuffEquation(
-        double q, double ws,
-        RefVector X_rot, RefVector Y_rot,
+        double q, double ws, std::vector<char> stability_class,
         RefMatrix ch4) {
 
-        double sigma_y_max = sigma_y.maxCoeff();
-        double sigma_z_max = sigma_z.maxCoeff();
+        Vector2d exit_location = calculateExitLocation(ws);
+        double max_downwind_dist = sqrt(exit_location[0]*exit_location[0] + exit_location[1]*exit_location[1]);
 
-        // compute thresholds
+        std::vector<double> temp(1);
+        std::vector<double> temp_y(1);
+        std::vector<double> temp_z(1);
+        temp[0] = max_downwind_dist;
+
+        getSigmaCoefficients(temp_y, temp_z, stability_class, temp); // get maximum sigma coeffs
+        double sigma_y_max = temp_y[0];
+        double sigma_z_max = temp_z[0];
+
+
+        // compute the maximum plume size
         double prefactor = (q * conversion_factor * one_over_two_pi_three_halves) / (sigma_y_max * sigma_y_max * sigma_z_max);
         double threshold = std::log(exp_tol / (2 * prefactor));
         double thresh_constant = std::sqrt(-2 * threshold);
@@ -222,85 +240,89 @@ private:
         thresh_xy_max = sigma_y_max * thresh_constant;
         thresh_z_max = sigma_z_max * thresh_constant;
 
+        // find out when puff will leave the domain
         double t = calculatePlumeTravelTime(thresh_xy_max, ws); // number of seconds til plume leaves grid
 
         int n_time_steps = ceil(t / sim_dt); // rescale to unitless number of timesteps
+
+        std::vector<double> sigma_y(n_time_steps+1);
+        std::vector<double> sigma_z(n_time_steps+1);
+
+        getPuffCenteredSigmas(sigma_y, sigma_z, n_time_steps, ws, stability_class);
 
         // bound check on time
         if (n_time_steps >= ch4.rows()) {
             n_time_steps = ch4.rows() - 1;
         }
 
-        for (int i = n_time_steps; i >= 0; i--) {
+        double shift_per_step = ws*sim_dt;
+        double x_shift_per_step = cosine*shift_per_step;
+        double y_shift_per_step = -sine*shift_per_step;
+        double wind_shift  = 0;
+        double x_shift = 0;
+        double y_shift = 0;
+
+        // prefactor excluding the sigmas since those change each time step
+        prefactor = q*conversion_factor*one_over_two_pi_three_halves;
+
+        // start at 1 since plume hasn't moved any on it's 0th time step so it's effective dispersion is 0
+        for (int i = 1; i <= n_time_steps; i++) {
+            // recompute threshold we use every step with current plume dispersion coefficient
+            double one_over_sig_y = 1/sigma_y[i];
+            double one_over_sig_z = 1/sigma_z[i];
+
+            double temp = std::log(exp_tol / (2 * prefactor*one_over_sig_y*one_over_sig_y*one_over_sig_z));
+            double local_thresh = std::sqrt(-2 * temp);
 
             // wind_shift is distance [m] plume has moved from source
-            double wind_shift = ws * (i * sim_dt); // i*sim_dt is # of seconds on current time step
+            wind_shift += shift_per_step;
+            x_shift += x_shift_per_step;
+            y_shift += y_shift_per_step;
 
-            std::vector<int> indices = coarseSpatialThreshold(wind_shift, thresh_constant);
-
+            std::vector<int> indices = coarseSpatialThreshold(wind_shift, local_thresh, sigma_y[i], sigma_z[i]);
+ 
             for (int j : indices) {
 
-                // Skips upwind cells since sigma_{y,z} = -1 for upwind points
-                if (sigma_y[j] < 0 || sigma_z[j] < 0) {
+                // Skips upwind cells since upwind diffusion is ignored
+                if(sigma_y[i] <= 0 || sigma_z[i] <= 0){
                     continue;
                 }
 
-                double t_xy = sigma_y[j] * thresh_constant; // local threshold
+                double t_xy = sigma_y[i] * local_thresh; // local threshold
 
                 // Exponential thresholding conditionals
-                if (std::abs(X_rot[j] - wind_shift) >= t_xy) {
+                if (std::abs(X_centered[j] - x_shift) >= t_xy) {
                     continue;
                 }
 
-                if (std::abs(Y_rot[j]) >= t_xy) {
+                if (std::abs(Y_centered[j] - y_shift) >= t_xy) {
                     continue;
                 }
 
-                double t_z = sigma_z[j] * thresh_constant; // local threshold
+                double t_z = sigma_z[i] * local_thresh; // local threshold
 
                 if (std::abs(Z[j] - z0) >= t_z) {
                     continue;
                 }
 
                 // terms are written in a way to minimize divisions and exp evaluations
-                double one_over_sig_y = 1 / sigma_y[j];
-                double one_over_sig_z = 1 / sigma_z[j];
-
-                double y_by_sig = Y_rot[j] * one_over_sig_y;
-                double x_by_sig = (X_rot[j] - wind_shift) * one_over_sig_y;
+                double y_dist_from_cent = (Y_centered[j] - y_shift);
+                double x_dist_from_cent = (X_centered[j] - x_shift);
                 double z_minus_by_sig = (Z[j] - z0) * one_over_sig_z;
                 double z_plus_by_sig = (Z[j] + z0) * one_over_sig_z;
 
+                double one_over_sig_y_sq = one_over_sig_y*one_over_sig_y;
+
                 double term_4_a_arg = z_minus_by_sig * z_minus_by_sig;
                 double term_4_b_arg = z_plus_by_sig * z_plus_by_sig;
-                double term_3_arg = (y_by_sig * y_by_sig + x_by_sig * x_by_sig);
+                double term_3_arg = (y_dist_from_cent * y_dist_from_cent + x_dist_from_cent * x_dist_from_cent)*one_over_sig_y_sq;
 
-                double term_1 = q * one_over_two_pi_three_halves * one_over_sig_y * one_over_sig_y * one_over_sig_z;
+                double term_1 = q * one_over_two_pi_three_halves * one_over_sig_y_sq * one_over_sig_z;
                 double term_4 = this->exp(-0.5 * (term_3_arg + term_4_a_arg)) + this->exp(-0.5 * (term_3_arg + term_4_b_arg));
 
                 ch4(i, j) += term_1 * term_4 * conversion_factor;
             }
         }
-    }
-
-
-
-    /* Rotates the X and Y grids based on the current wind direction and source location.
-    Inputs:
-        X_rot, Y_rot: vectors the same size as the grid to get filled with rotated coordinates.
-    Returns:
-        None, but fills X_rot and Y_rot with the rotated grids.
-    */
-    void rotatePoints(RefVector X_rot, RefVector Y_rot){
-
-        Eigen::Matrix2d R;
-        R << cosine, -sine,
-            sine, cosine;
-
-        Matrix R_g = R*stackedGrid;
-
-        X_rot = R_g.row(0);
-        Y_rot = R_g.row(1);
     }
 
     /* Computes the time step when the plume will exit the computational grid. 
@@ -417,6 +439,7 @@ private:
         }
     }
 
+
     /* Gets dispersion coefficients (sigma_{y,z}) for the entire grid.
         sigma_z = a*x^b, x in km,
         sigma_y = 465.11628*x*tan(THETA) where THETA = 0.017453293*(c-d*ln(x)) where x in km
@@ -427,16 +450,14 @@ private:
     Returns:
         None, but sigma_y and sigma_z class variables are filled with the dispersion coefficients.
     */
-    void getSigmaCoefficients(std::vector<char> stability_class, Vector X_rot){
-        X_rot = X_rot.array() * 0.001; // convert to km
+    void getSigmaCoefficients(std::vector<double>& sigma_y, std::vector<double>& sigma_z, std::vector<char> stability_class, std::vector<double>& X_rot){
+        // X_rot = X_rot.array() * 0.001; // convert to km
 
         int n_stab = stability_class.size();
 
         for(int i = 0; i < X_rot.size(); i++){
-            sigma_y[i] = 0;
-            sigma_z[i] = 0;
 
-            double x = X_rot[i];
+            double x = X_rot[i]*0.001;
 
             double sigma_y_temp;
             double sigma_z_temp;
@@ -589,10 +610,10 @@ private:
                 } else {
                     throw std::invalid_argument("Invalid stability class.");
                 }
+                double Theta = 0.017453293 * (c - d * std::log(x)); // in radians
+                sigma_y_temp = 465.11628 * x * std::tan(Theta); // in meters
     
                 if (flag == 0) {
-                    double Theta = 0.017453293 * (c - d * std::log(x)); // in radians
-                    sigma_y_temp = 465.11628 * x * std::tan(Theta); // in meters
                     sigma_z_temp = a * std::pow(x, b); // in meters
                     sigma_z_temp = std::min(sigma_z_temp, 5000.0);
                 } else {
@@ -611,7 +632,7 @@ private:
 
     // somewhat hacky way of making this act as an abstract function
     // okay with this for now since it's private and can't get called from python due to lack of bindings
-    virtual std::vector<int> coarseSpatialThreshold(double, double){ throw std::logic_error("Not implemented"); }
+    virtual std::vector<int> coarseSpatialThreshold(double, double, double, double){ throw std::logic_error("Not implemented"); }
 
     static double fastExp(double x){
         constexpr double a = (1ll << 52) / 0.6931471805599453;
@@ -632,10 +653,9 @@ private:
         y0 = source_coordinates(source_index, 1);
         z0 = source_coordinates(source_index, 2);
 
-        Vector X_shift = X.array() - x0;
-        Vector Y_shift = Y.array() - y0;
-
-        stackedGrid << X_shift.transpose(), Y_shift.transpose();
+        // center the x,y grids at the source
+        X_centered = X.array() - x0;
+        Y_centered = Y.array() - y0;
 
         x_min = X.minCoeff() - x0;
         y_min = Y.minCoeff() - y0;
@@ -709,17 +729,10 @@ private:
     
 
     // The grid-based spatial thresholding uses inequalities based on grid indices 
-    std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant) override {
+    std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant, 
+                        double sig_y_current,  double sig_z_current) override {
 
         std::vector<int> indices = getValidIndices(thresh_xy_max, thresh_z_max, wind_shift);
-
-        if(!indices.empty()){
-            // shrinks the thresholds
-            double box_max_sig_y = sigma_y(indices).maxCoeff(); // max sigma of the current valid indices
-            double box_max_sig_z = sigma_z(indices).maxCoeff();
-            thresh_xy_max = box_max_sig_y*thresh_constant;
-            thresh_z_max = box_max_sig_z*thresh_constant;
-        }
 
         return indices;
     }
@@ -894,7 +907,8 @@ public:
     }
 private:
     // mostly a stub, can add a precomputed spatial threshold later
-    std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant) override {
+    std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant, 
+                        double sig_y_current,  double sig_z_current) override {
         return indices;
     }
 
