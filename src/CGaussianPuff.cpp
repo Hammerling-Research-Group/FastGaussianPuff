@@ -270,9 +270,10 @@ private:
         for (int i = 1; i <= n_time_steps; i++) {
             // recompute threshold we use every step with current plume dispersion coefficient
             double one_over_sig_y = 1/sigma_y[i];
-            double one_over_sig_z = 1/sigma_z[i];
+            double one_over_sig_z = 1/sigma_z[i]; 
+            double local_prefactor = prefactor*one_over_sig_y*one_over_sig_y*one_over_sig_z;
 
-            double temp = std::log(exp_tol / (2 * prefactor*one_over_sig_y*one_over_sig_y*one_over_sig_z));
+            double temp = std::log(exp_tol / (2 * local_prefactor));
             double local_thresh = std::sqrt(-2 * temp);
 
             // wind_shift is distance [m] plume has moved from source
@@ -318,10 +319,9 @@ private:
                 double term_4_b_arg = z_plus_by_sig * z_plus_by_sig;
                 double term_3_arg = (y_dist_from_cent * y_dist_from_cent + x_dist_from_cent * x_dist_from_cent)*one_over_sig_y_sq;
 
-                double term_1 = q * one_over_two_pi_three_halves * one_over_sig_y_sq * one_over_sig_z;
                 double term_4 = this->exp(-0.5 * (term_3_arg + term_4_a_arg)) + this->exp(-0.5 * (term_3_arg + term_4_b_arg));
 
-                ch4(i, j) += term_1 * term_4 * conversion_factor;
+                ch4(i, j) += local_prefactor * term_4;
             }
         }
     }
