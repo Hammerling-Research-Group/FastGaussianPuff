@@ -191,7 +191,7 @@ private:
         getSigmaCoefficients(sigma_y, sigma_z, stability_class, downwind_dists);
     }
 
-    Vector2d calculateExitLocation(double ws){
+    Vector2d calculateExitLocation(){
 
         Vector2d box_min(x_min, y_min);
         Vector2d box_max(x_max, y_max);
@@ -219,7 +219,7 @@ private:
         double q, double ws, std::vector<char> stability_class,
         RefMatrix ch4) {
 
-        Vector2d exit_location = calculateExitLocation(ws);
+        Vector2d exit_location = calculateExitLocation();
         double max_downwind_dist = sqrt(exit_location[0]*exit_location[0] + exit_location[1]*exit_location[1]);
 
         std::vector<double> temp(1);
@@ -248,6 +248,7 @@ private:
         std::vector<double> sigma_y(n_time_steps+1);
         std::vector<double> sigma_z(n_time_steps+1);
 
+        // gets the dispersion coefficient for the puff at each location on its path
         getPuffCenteredSigmas(sigma_y, sigma_z, n_time_steps, ws, stability_class);
 
         // bound check on time
@@ -422,6 +423,7 @@ private:
         hour: current hour of day
     Returns:
         stability_class: character A-F representing a Pasquill stability class
+            note: multiple classes can be returned. In this case, they get averaged when computing dispersion coefficients.
     */
     std::vector<char> stabilityClassifier(double wind_speed, int hour, int day_start=7, int day_end=18) {
 
@@ -445,23 +447,24 @@ private:
         sigma_y = 465.11628*x*tan(THETA) where THETA = 0.017453293*(c-d*ln(x)) where x in km
         Note: sigma_{y,z} = -1 if x < 0 due to there being no upwind dispersion.
     Inputs:
+        sigma_y, sigma_z: vectors to fill with dispersion coefficients
         stability_class: a char in A-F from Pasquill stability classes 
         X_rot: rotated version of the X grid
     Returns:
-        None, but sigma_y and sigma_z class variables are filled with the dispersion coefficients.
+        None, but sigma_y and sigma_z are filled with the dispersion coefficients.
     */
-    void getSigmaCoefficients(std::vector<double>& sigma_y, std::vector<double>& sigma_z, std::vector<char> stability_class, std::vector<double>& X_rot){
-        // X_rot = X_rot.array() * 0.001; // convert to km
+    void getSigmaCoefficients(std::vector<double>& sigma_y, std::vector<double>& sigma_z, std::vector<char> stability_class, std::vector<double>& downwind_dists){
 
         int n_stab = stability_class.size();
 
-        for(int i = 0; i < X_rot.size(); i++){
+        for(int i = 0; i < downwind_dists.size(); i++){
 
-            double x = X_rot[i]*0.001;
+            double x = downwind_dists[i]*0.001;
 
             double sigma_y_temp;
             double sigma_z_temp;
 
+            // note: if there are multiple stability classes, we average the dispersion coefficients
             for(int j = 0; j < n_stab; j++){
                 char stab = stability_class[j];
                 int flag = 0;
