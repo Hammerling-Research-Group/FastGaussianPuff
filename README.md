@@ -56,7 +56,7 @@ $ conda activate gp
 
 The module works with pip. To install, use:
 ```shell
-$ pip install .
+$ pip install gp
 ```
 
 Alternatively, you can install manually using CMake. You can compile and install everything with:
