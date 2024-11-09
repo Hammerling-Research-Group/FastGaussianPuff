@@ -108,6 +108,8 @@ class GaussianPuff:
         ns = (simulation_end-simulation_start).total_seconds()
         self.n_obs = floor(ns/obs_dt) + 1 # number of observed data points we have
 
+        self._check_wind_data(wind_speeds)
+
         # resample the wind data from obs_dt to the simulation resolution sim_dt
         self._interpolate_wind_data(wind_speeds, wind_directions, puff_dt, simulation_start, simulation_end)
 
@@ -207,6 +209,13 @@ class GaussianPuff:
         if out_dt < sim_dt:
             print("ERROR IN INITIALIZATION: output_dt must be greater than or equal to sim_dt")
             exit(-1)
+
+    def _check_wind_data(self, ws):
+        if np.any(ws <= 0):
+            print("[FastGaussianPuff] ERROR: wind speed <= 0 in the input. Exiting.")
+            exit(-1)
+        if np.any(ws < 1e-2):
+            print("[FastGaussianPuff] WARNING: There's a wind speed < 0.01 m/s. This is likely a mistake and will cause slow performance. The simulation will continue, but results will be poor as the puff model is degenerate in low wind speeds.")
 
     def _interpolate_wind_data(self, wind_speeds, wind_directions, puff_dt, sim_start, sim_end):
         '''
