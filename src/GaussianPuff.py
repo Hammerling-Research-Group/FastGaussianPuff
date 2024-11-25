@@ -211,12 +211,9 @@ class GaussianPuff:
             exit(-1)
 
     def _check_wind_data(self, ws):
-        if np.any(ws <= 0):
-            print("[FastGaussianPuff] ERROR: wind speed <= 0 in the input. Exiting.")
-            exit(-1)
-        if np.any(ws < 1e-2):
-            print("[FastGaussianPuff] WARNING: There's a wind speed < 0.01 m/s. This is likely a mistake and will cause slow performance. The simulation will continue, but results will be poor as the puff model is degenerate in low wind speeds.")
-
+    if np.any(ws <= 0):
+        print("[FastGaussianPuff] WARNING: wind speed <= 0 detected in the input. The simulation will proceed, but results may be unreliable.")
+    
     def _interpolate_wind_data(self, wind_speeds, wind_directions, puff_dt, sim_start, sim_end):
         '''
         Resample wind_speeds and wind_directions to the simulation resolution by interpolation.
