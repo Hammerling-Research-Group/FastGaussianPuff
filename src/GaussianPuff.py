@@ -85,11 +85,11 @@ class GaussianPuff:
         self.sim_dt = sim_dt 
         self.puff_dt = puff_dt
         if output_dt is None:
-            self.output_dt = self.obs_dt
+            self.out_dt = self.obs_dt
         else:
-            self.output_dt = output_dt
+            self.out_dt = output_dt
 
-        self._verify_inputs(self.sim_dt, self.puff_dt, self.obs_dt, self.output_dt)
+        self._check_timestep_parameters()
 
         self.sim_start = simulation_start
         self.sim_end = simulation_end
@@ -107,6 +107,10 @@ class GaussianPuff:
 
         ns = (simulation_end-simulation_start).total_seconds()
         self.n_obs = floor(ns/obs_dt) + 1 # number of observed data points we have
+
+        arrays = self._check_array_dtypes(wind_speeds, wind_directions, source_coordinates, 
+                                     emission_rates, grid_coordinates, sensor_coordinates)
+        wind_speeds, wind_directions, source_coordinates, emission_rates, grid_coordinates, sensor_coordinates = arrays
 
         self._check_wind_data(wind_speeds)
 
@@ -181,34 +185,63 @@ class GaussianPuff:
         # initialize the final simulated concentration array
         self.ch4_sim = np.zeros((self.n_sim, self.N_points)) # simulation in sim_dt resolution, flattened
 
-    def _verify_inputs(self, sim_dt, puff_dt, obs_dt, out_dt):
+    def _check_timestep_parameters(self):
 
         # rationale: negative time seems bad. maybe ask a physicist.
-        if sim_dt <= 0:
-            print("ERROR IN INITIALIZATION: sim_dt must be a positive value")
+        if self.sim_dt <= 0:
+            print("[fGP] Error: sim_dt must be a positive value")
             exit(-1)
 
         # rationale: breaking this would mean multiple puffs are emitted in between simulation time steps. this constraint
         # decouples sim_dt and puff_dt so that sim_dt can be scaled according to wind speed and puff_dt can be scaled
         # according to the change in wind direction over time to guarantee accuracy of the simulation (i.e. no skipping)
-        if puff_dt < sim_dt:
-            print("ERROR IN INITIALIZATION: puff_dt must be greater than or equal to sim_dt")
+        if self.puff_dt < self.sim_dt:
+            print("[fGP] Error: puff_dt must be greater than or equal to sim_dt")
             exit(-1)
 
         # rationale: concentration arrays are build at sim_dt resolution. puff_dt = n*sim_dt for an integer n > 0
         # ensure that puffs are emitted on simulation time steps and prevents the need for a weird interpolation/rounding.
         # this constaint could likely be avoided, but it isn't that strong and makes the code easier.
         eps = 1e-5
-        ratio = puff_dt/sim_dt
+        ratio = self.puff_dt/self.sim_dt
         if abs(ratio - round(ratio)) > eps:
-            print("ERROR IN INITIALIZATION: puff_dt needs to be a positive integer multiple of sim_dt")
+            print("[fGP] Error: puff_dt needs to be a positive integer multiple of sim_dt")
             exit(-1)
 
         # rationale: we don't have simulation data at a resolution less than sim_dt, so you'll have blank
         # concentration fields if this condition isn't met
-        if out_dt < sim_dt:
-            print("ERROR IN INITIALIZATION: output_dt must be greater than or equal to sim_dt")
+        if self.out_dt < self.sim_dt:
+            print("[fGP] Error: output_dt must be greater than or equal to sim_dt")
             exit(-1)
+
+    def _check_array_dtypes(self, wind_speeds, wind_directions, source_coordinates, emission_rates, grid_coordinates, sensor_coordinates):
+        variables = {
+            "wind_speeds": wind_speeds,
+            "wind_directions": wind_directions,
+            "source_coordinates": source_coordinates,
+            "emission_rates": emission_rates,
+            "grid_coordinates": grid_coordinates,
+            "sensor_coordinates": sensor_coordinates,
+        }
+        
+        casted_arrays = {}
+        
+        for name, var in variables.items():
+            if var is not None:
+                try:
+                    casted_arrays[name] = np.asarray(var, dtype=float)
+                except Exception as e:
+                    raise ValueError(f"[fGP] Error: Failed to cast '{name}' to a NumPy float array: {e}. Try using an array dtype.")
+            else:
+                casted_arrays[name] = None
+
+        return (casted_arrays["wind_speeds"], 
+                casted_arrays["wind_directions"], 
+                casted_arrays["source_coordinates"], 
+                casted_arrays["emission_rates"], 
+                casted_arrays["grid_coordinates"], 
+                casted_arrays["sensor_coordinates"])
+
 
     def _check_wind_data(self, ws):
         if np.any(ws <= 0):
@@ -333,7 +366,7 @@ class GaussianPuff:
         self.GPC.simulate(self.ch4_sim)
 
         # resample results to the output_dt-resolution
-        self.ch4_obs = self._resample_simulation(self.ch4_sim, self.output_dt)
+        self.ch4_obs = self._resample_simulation(self.ch4_sim, self.out_dt)
         
         
         if self.quiet == False:
