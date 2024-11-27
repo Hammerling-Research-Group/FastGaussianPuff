@@ -5,7 +5,7 @@ import matplotlib.pylab as plt
 from FastGaussianPuff import GaussianPuff as GP
 
 # set simulation parameters
-# IMPORTANT: obs_dt must be a positive integer multiple of sim_dt, and both sim_dt and puff_dt must be integers
+# IMPORTANT: obs_dt must be a positive integer multiple of sim_dt
 obs_dt, sim_dt, puff_dt = 60, 1, 1
 
 # start and end times at minute resolution. Needs to be in the local timezone of where we're simulating
