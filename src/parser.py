@@ -84,7 +84,7 @@ class PuffParser:
       z = np.zeros((1, len(list(self.sensor_coords.keys()))))
       df_ch4 = pd.concat([pd.DataFrame(z, columns=list(self.sensor_coords.keys())), df_ch4], ignore_index=True)
 
-      gp_out_res = gp.output_dt # seconds
+      gp_out_res = gp.out_dt # seconds
       td = pd.Timedelta(gp_out_res, unit='seconds')
       
       time_series = pd.date_range(start_time, end_time + td, periods=gp.n_out + 1)
