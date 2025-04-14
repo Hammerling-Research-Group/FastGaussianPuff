@@ -14,6 +14,15 @@ obs_dt, sim_dt, puff_dt = 60, 1, 1
 start = pd.to_datetime('2022-01-01 12:00:00')
 end = pd.to_datetime('2022-01-01 13:00:00')
 
+# Specify the timezone (location) of where you are simulating
+time_zone = 'America/New_York'
+
+# Create hours array
+utc_total_time_series = pd.date_range(start=start, end=end, freq=f'{obs_dt}s', tz='UTC')
+local_total_time_series = utc_total_time_series.tz_convert(time_zone)
+hours_array = local_total_time_series.hour.values
+print(min(hours_array), max(hours_array))
+
 # fabricated wind data
 fake_times = np.linspace(0,10,61)
 wind_speeds = [3]*61
