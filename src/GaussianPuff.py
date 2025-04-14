@@ -98,6 +98,8 @@ class GaussianPuff:
 
         self.sim_start = simulation_start
         self.sim_end = simulation_end
+        
+        # add timeseries of hours here
 
         self.quiet = quiet
 
