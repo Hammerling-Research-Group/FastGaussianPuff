@@ -19,7 +19,7 @@ end = pd.to_datetime('2022-01-01 13:00:00')
 time_zone = 'America/New_York'
 
 # Create hours array at obs_dt resolution
-utc_total_time_series = pd.date_range(start=start, end=end, freq=f'{obs_dt}s', tz='UTC')
+utc_total_time_series = pd.date_range(start=start, end=end, freq=f'{puff_dt}s', tz='UTC')
 local_total_time_series = utc_total_time_series.tz_convert(time_zone)
 hours_array = local_total_time_series.hour.values
 print(min(hours_array), max(hours_array))
