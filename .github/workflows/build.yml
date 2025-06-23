@@ -25,7 +25,7 @@ jobs:
         with:
           environment-name: gp
           environment-file: environment.yml
-          init-shell: true
+          init-shell: bash
           cache-environment: false
           cache-downloads: true
 
