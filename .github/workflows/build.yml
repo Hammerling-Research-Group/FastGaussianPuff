@@ -39,6 +39,7 @@ jobs:
       - name: Configure and compile the library
         shell: bash
         run: |
+          eval "$(micromamba shell hook --shell bash)"
           micromamba activate gp
           mkdir build && cd build
           cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
