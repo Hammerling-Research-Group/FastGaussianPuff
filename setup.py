@@ -11,6 +11,7 @@ class CMakeExtension(Extension):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
 
+
 class CMakeBuild(build_ext):
     def run(self):
         try:
@@ -34,11 +35,6 @@ class CMakeBuild(build_ext):
             "-DCMAKE_BUILD_TYPE=" + ("Debug" if self.debug else "Release"),
         ]
 
-
-        # Set CXX compiler based on platform. This assumes that the compiler comes from cxx-compiler on conda-forge
-        if sys.platform.startswith("darwin"):
-            os.environ["CXX"] = os.environ["CONDA_PREFIX"] +  "/bin/clang++"
-
         build_args = ["--config", "Release"]
 
         if not os.path.exists(self.build_temp):
@@ -48,7 +44,6 @@ class CMakeBuild(build_ext):
         # (needed e.g. to build for ARM OSx on conda-forge)
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
-
 
         if sys.platform.startswith("darwin"):
             # Cross-compile support for macOS - respect ARCHFLAGS if set
