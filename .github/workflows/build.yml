@@ -32,14 +32,14 @@ jobs:
       - name: List environment
         shell: bash
         run: |
-          eval "$(micromamba shell hook --shell bash)"
+          eval "$(micromamba shell hook --shell=bash)"
           micromamba activate gp
           micromamba list
 
       - name: Configure and compile the library
         shell: bash
         run: |
-          eval "$(micromamba shell hook --shell bash)"
+          eval "$(micromamba shell hook --shell=bash)"
           micromamba activate gp
           mkdir build && cd build
           cmake -DCMAKE_VERBOSE_MAKEFILE=yes -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
@@ -48,12 +48,14 @@ jobs:
       - name: Install via pip
         shell: bash
         run: |
+          eval "$(micromamba shell hook --shell=bash)"
           micromamba activate gp
           pip install -vv .
 
       - name: Verify import of python class
         shell: bash
         run: |
+          eval "$(micromamba shell hook --shell=bash)"
           micromamba activate gp
           pytest -sv tests/test_import.py
           cd tests/
@@ -63,6 +65,7 @@ jobs:
       - name: Run demo
         shell: bash
         run: |
+          eval "$(micromamba shell hook --shell=bash)"
           micromamba activate gp
           cd demo
           python demo.py
