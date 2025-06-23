@@ -60,3 +60,11 @@ jobs:
         pytest -sv test_import.py
         cd ..
       shell: bash -el {0}
+
+    - name: Run demo
+      run: |
+          cd demo
+          python demo.py
+          python sensor_demo.py
+          cd ..
+      shell: bash -el {0}

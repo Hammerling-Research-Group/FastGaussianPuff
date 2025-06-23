@@ -1,11 +1,12 @@
-source_file ../../input_data/ADED_sources.csv
-sensor_file ../../input_data/ADED_sensors.csv
-wind_file ../../input_data/wind_median.csv
+source_file ../../regression/in/ADED22_sources.csv
+sensor_file ../../regression/in/ADED22_sensors.csv
+wind_file ../../regression/in/wind_median.csv
 experiments_file ./exp_multi.csv
 wind_dt 60 #in [s], expected to be uniform for whole file
 output_dir ../out/
 output_dt 60 # temporal resolution of simulation output in [s]
 coordinate_system cartesian # can be either geodetic (lat/lon) or cartesian (x/y)
-coordinate_columns ['id','easting','northing','height'] # names of the columns for coordinates
+coordinate_columns ['name','easting','northing','height'] # names of the columns for coordinates
 sim_dt 1
 puff_dt 1
+time_zone America/Denver

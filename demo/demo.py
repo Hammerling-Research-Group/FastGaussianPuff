@@ -10,11 +10,13 @@ def main():
     # IMPORTANT: obs_dt must be a positive integer multiple of sim_dt
     obs_dt, sim_dt, puff_dt = 60, 1, 10 # [seconds]
 
-    # start and end times at minute resolution. Needs to be in the local timezone of where we're simulating
-    # e.g. if we're simulating a site in England, it needs to be in UTC.
-    # if we're simulating a site in Colorado, it should be in MST/MDT
-    start = pd.to_datetime('2022-01-01 12:00:00')
-    end = pd.to_datetime('2022-01-01 13:00:00')
+    # start and end times need to be timezone-aware.
+    # start/end are the times you want to simulate between. time_zone is the location you want to simulate in.
+    # you can input start and end times in any timezone and they'll get converted to the time_zone you specify.
+    # (e.g. input start/end in UTC and set time_zone to "America/Denver" to simulate in mountain time)
+    start = pd.to_datetime("2022-01-01 12:00:00-06:00")
+    end = pd.to_datetime("2022-01-01 13:00:00-06:00")
+    time_zone = "America/Denver"  # alternative: "US/Mountain"
 
     # fabricated wind data
     fake_times = np.linspace(0,10,61)
@@ -31,17 +33,25 @@ def main():
     # grid coordinates
     grid_coords = np.array([0, 0, 0, 50, 50, 10]) # format is (x_min, y_min, z_min, x_max, y_max, z_max) in [m]
 
-
     # location and emission rate for emitting source
     source_coordinates =  np.array([[25, 25, 5]]) # format is [[x0,y0,z0]] in [m]. needs to be nested list for compatibility with multi source (coming soon)
     emission_rate = np.array([3]) # emission rate for the single source above, [kg/hr]
 
-    gp = GP(obs_dt, sim_dt, puff_dt,
-                    start, end,
-                    source_coordinates, emission_rate,
-                    wind_speeds, wind_directions, 
-                    grid_coordinates=grid_coords,
-                    nx=x_num, ny=y_num, nz=z_num
+    gp = GP(
+        obs_dt=obs_dt,
+        sim_dt=sim_dt,
+        puff_dt=puff_dt,
+        simulation_start=start,
+        simulation_end=end,
+        source_coordinates=source_coordinates,
+        emission_rates=emission_rate,
+        wind_speeds=wind_speeds,
+        wind_directions=wind_directions,
+        grid_coordinates=grid_coords,
+        nx=x_num,
+        ny=y_num,
+        nz=z_num,
+        time_zone=time_zone,
     )
 
     print("STARTING SIMULATION")

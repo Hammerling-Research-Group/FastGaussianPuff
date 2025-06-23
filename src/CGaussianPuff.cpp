@@ -21,6 +21,8 @@ typedef Eigen::VectorXd Vector;
 typedef Eigen::Ref<Vector> RefVector;
 typedef Eigen::MatrixXd Matrix;
 typedef Eigen::Ref<Matrix, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> RefMatrix;
+typedef Eigen::VectorXi VectorXi;
+typedef Eigen::Ref<VectorXi> RefVectorXi;
 
 typedef std::vector<std::vector<std::vector<int> > > vec3d;
 typedef std::chrono::system_clock::time_point TimePoint;
@@ -33,12 +35,14 @@ protected:
 
     double sim_dt, puff_dt;
     double puff_duration;
+    int n_puffs;
+
+    VectorXi hours;
 
     const Vector wind_speeds, wind_directions;
 
     double thresh_xy_max, thresh_z_max;
 
-    time_t sim_start, sim_end;
     Matrix source_coordinates;
     Vector emission_strengths;
 
@@ -78,30 +82,30 @@ public:
         unsafe: enables unsafe math operations that are faster but less accurate due to the approximations used.
         quiet: false if you want output for simulation completeness. true for silent simulation.
     */
-    CGaussianPuff(Vector X, Vector Y, Vector Z, int N,
-                    double sim_dt, double puff_dt, double puff_duration,
-                    TimePoint sim_start, TimePoint sim_end,
-                    Vector wind_speeds, Vector wind_directions,
-                    Matrix source_coordinates, Vector emission_strengths,
-                    double conversion_factor, double exp_tol,
-                    bool skip_low_wind, float low_wind_thresh,
-                    bool unsafe, bool quiet)
+  CGaussianPuff(Vector X, Vector Y, Vector Z, int N, double sim_dt,
+                double puff_dt, double puff_duration, int n_puffs,
+                VectorXi hours, Vector wind_speeds, Vector wind_directions,
+                Matrix source_coordinates, Vector emission_strengths,
+                double conversion_factor, double exp_tol, bool skip_low_wind,
+                float low_wind_thresh, bool unsafe, bool quiet)
 
-    : X(X), Y(Y), Z(Z), N_points(N), 
-    sim_dt(sim_dt), puff_dt(puff_dt), puff_duration(puff_duration), wind_speeds(wind_speeds), wind_directions(wind_directions),
-    source_coordinates(source_coordinates), emission_strengths(emission_strengths),
-    conversion_factor(conversion_factor), exp_tol(exp_tol), quiet(quiet), skip_low_wind(skip_low_wind), low_wind_thresh(low_wind_thresh){
+      : X(X), Y(Y), Z(Z), N_points(N), sim_dt(sim_dt), puff_dt(puff_dt),
+        puff_duration(puff_duration), n_puffs(n_puffs), hours(hours),
+        wind_speeds(wind_speeds), wind_directions(wind_directions),
+        source_coordinates(source_coordinates),
+        emission_strengths(emission_strengths),
+        conversion_factor(conversion_factor), exp_tol(exp_tol),
+        skip_low_wind(skip_low_wind), low_wind_thresh(low_wind_thresh),
+        quiet(quiet) {
 
-        if(unsafe){
-            if (!quiet) std::cout << "RUNNING IN UNSAFE MODE\n";
-            this->exp = &fastExp; 
-        } else {
-            this->exp = [](double x){return std::exp(x);};
-        }
-
-        this->sim_start = std::chrono::system_clock::to_time_t(sim_start);
-        this->sim_end = std::chrono::system_clock::to_time_t(sim_end);
+    if (unsafe) {
+      if (!quiet)
+        std::cout << "RUNNING IN UNSAFE MODE\n";
+      this->exp = &fastExp;
+    } else {
+      this->exp = [](double x) { return std::exp(x); };
     }
+  }
 
     /* Simulation time loop
     Inputs:
@@ -111,19 +115,11 @@ public:
     */
     void simulate(RefMatrix ch4){
 
-        double emission_length = difftime(sim_end, sim_start);
-        int n_puffs = ceil(emission_length/puff_dt);
-
         // later, for multisource: iterate over source coords
         setSourceCoordinates(0);
         double q = emission_strengths[0]/3600; // convert to kg/s
 
         double emission_per_puff = q*puff_dt;
-
-        tm puff_start = *localtime(&sim_start);
-        int current_hour = puff_start.tm_hour;
-        double current_min = puff_start.tm_min;
-        double puff_dt_minute = static_cast<double>(puff_dt)/60.0; // puff dt in minutes
 
         double report_ratio = 0.1;
 
@@ -131,32 +127,28 @@ public:
         int puff_to_sim_ratio = round(puff_dt/sim_dt); // number of simulation steps for every puff
 
         for(int p = 0; p < n_puffs; p++){
+          if (skip_low_wind && wind_speeds[p] < low_wind_thresh)
+            continue;
 
-            if (PyErr_CheckSignals() != 0) throw pybind11::error_already_set(); // catches ctrl+c signal from python
+          if (PyErr_CheckSignals() != 0)
+            throw pybind11::error_already_set(); // catches ctrl+c signal from
+                                                 // python
 
-            // keeps track of current hour. needed to compute stability class
-            current_min += puff_dt_minute;
-            if(current_min > 60.0){
-                current_min = current_min - 60.0; // maintain fractional part over 60
-                current_hour += 1;
-                if(current_hour > 23) current_hour = 0;
-            }
+          // bounds check on time
+          if (p * puff_to_sim_ratio + puff_lifetime >= ch4.rows())
+            puff_lifetime = ch4.rows() - p * puff_to_sim_ratio;
 
-            // bounds check on time
-            if(p*puff_to_sim_ratio + puff_lifetime >= ch4.rows()) puff_lifetime = ch4.rows()-p*puff_to_sim_ratio;
+          double theta = windDirectionToAngle(wind_directions[p]);
 
-            double theta = windDirectionToAngle(wind_directions[p]);
+          // computes concentration timeseries for this puff
+          concentrationPerPuff(
+              emission_per_puff, theta, wind_speeds[p], hours[p],
+              ch4.middleRows(p * puff_to_sim_ratio, puff_lifetime));
 
-            if(skip_low_wind && wind_speeds[p] < low_wind_thresh) continue;
-
-            // computes concentration timeseries for this puff
-            concentrationPerPuff(emission_per_puff, theta, wind_speeds[p], 
-                                    current_hour, ch4.middleRows(p*puff_to_sim_ratio, puff_lifetime));
-            
-            if(!quiet && floor(n_puffs*report_ratio) == p){
-                std::cout << "Simulation is " << report_ratio*100 << "\% done\n";
-                report_ratio += 0.1;
-            }
+          if (!quiet && floor(n_puffs * report_ratio) == p) {
+            std::cout << "Simulation is " << report_ratio * 100 << "\% done\n";
+            report_ratio += 0.1;
+          }
         }
     }
 
@@ -691,49 +683,43 @@ public:
     /* Constructor. See CGaussianPuff constructor for information on parameters not mentioned here.
     nx,ny,nz: number of grid points along each axis respectively
     */
-    GridGaussianPuff(Vector X, Vector Y, Vector Z, 
-                    int nx, int ny, int nz, 
-                    double sim_dt, double puff_dt, double puff_duration,
-                    TimePoint sim_start, TimePoint sim_end,
-                    Vector wind_speeds, Vector wind_directions,
-                    Matrix source_coordinates, Vector emission_strengths,
-                    double conversion_factor, double exp_tol,
-                    bool skip_low_wind, float low_wind_thresh,
-                    bool unsafe, bool quiet)
+  GridGaussianPuff(Vector X, Vector Y, Vector Z, int nx, int ny, int nz,
+                   double sim_dt, double puff_dt, double puff_duration,
+                   int n_puffs, VectorXi hours, Vector wind_speeds,
+                   Vector wind_directions, Matrix source_coordinates,
+                   Vector emission_strengths, double conversion_factor,
+                   double exp_tol, bool skip_low_wind, float low_wind_thresh,
+                   bool unsafe, bool quiet)
 
-        : CGaussianPuff(X, Y, Z, nx*ny*nz,
-                        sim_dt, puff_dt, puff_duration,
-                        sim_start, sim_end,
-                        wind_speeds, wind_directions,
-                        source_coordinates, emission_strengths,
-                        conversion_factor, exp_tol,
-                        skip_low_wind, low_wind_thresh,
-                        unsafe, quiet), 
+      : CGaussianPuff(X, Y, Z, nx * ny * nz, sim_dt, puff_dt, puff_duration,
+                      n_puffs, hours, wind_speeds, wind_directions,
+                      source_coordinates, emission_strengths, conversion_factor,
+                      exp_tol, skip_low_wind, low_wind_thresh, unsafe, quiet),
+        nx(nx), ny(ny), nz(nz) {
 
-        nx(nx), ny(ny), nz(nz)
-    {
+    std::vector<double> gridSpacing = computeGridSpacing();
+    dx = gridSpacing[0];
+    dy = gridSpacing[1];
+    dz = gridSpacing[2];
 
-        std::vector<double> gridSpacing = computeGridSpacing();
-        dx = gridSpacing[0];
-        dy = gridSpacing[1];
-        dz = gridSpacing[2];
+    // declares empty 3D vector of integers of size (nx, ny, nz)
+    vec3d map_table(ny,
+                    std::vector<std::vector<int>>(nx, std::vector<int>(nz)));
 
-        // declares empty 3D vector of integers of size (nx, ny, nz)
-        vec3d map_table(ny, std::vector<std::vector<int>>(nx, std::vector<int>(nz)));
-
-        // precomputes the map from the 3D meshgrid index to the 1D raveled index.
-        // precomputed because the divisions in map() are too expensive to do repeatedly. 
-        for(int i = 0; i < nx; i++){
-            for(int j = 0; j < ny; j++){
-                for(int k = 0; k < nz; k++){
-                    // (i,j) index flipped since numpy's 'ij' indexing is being used on the meshgrids
-                    map_table[j][i][k] = map(i,j,k);
-                }
-            }
+    // precomputes the map from the 3D meshgrid index to the 1D raveled index.
+    // precomputed because the divisions in map() are too expensive to do
+    // repeatedly.
+    for (int i = 0; i < nx; i++) {
+      for (int j = 0; j < ny; j++) {
+        for (int k = 0; k < nz; k++) {
+          // (i,j) index flipped since numpy's 'ij' indexing is being used on
+          // the meshgrids
+          map_table[j][i][k] = map(i, j, k);
         }
-        this->map_table = map_table;
-
+      }
     }
+    this->map_table = map_table;
+  }
 
 private:
     vec3d map_table; // precomputed map from the 3D meshgrid index to the 1D raveled index.
@@ -892,32 +878,26 @@ public:
     /* Constructor. See CGaussianPuff constructor for information about parameters not given here.
     N_sensors: Number of sensors being simulated.
     */
-    SensorGaussianPuff(Vector X, Vector Y, Vector Z, 
-                    int N_sensors,
-                    double sim_dt, double puff_dt, double puff_duration,
-                    TimePoint sim_start, TimePoint sim_end,
-                    Vector wind_speeds, Vector wind_directions,
-                    Matrix source_coordinates, Vector emission_strengths,
-                    double conversion_factor, double exp_tol,
-                    bool skip_low_wind, float low_wind_thresh,
-                    bool unsafe, bool quiet) :
-        CGaussianPuff(X, Y, Z, N_sensors,
-                        sim_dt, puff_dt, puff_duration,
-                        sim_start, sim_end,
-                        wind_speeds, wind_directions,
-                        source_coordinates, emission_strengths,
-                        conversion_factor, exp_tol,
-                        skip_low_wind, low_wind_thresh,
-                        unsafe, quiet)
-    {
+  SensorGaussianPuff(Vector X, Vector Y, Vector Z, int N_sensors, double sim_dt,
+                     double puff_dt, double puff_duration, int n_puffs,
+                     VectorXi hours, Vector wind_speeds, Vector wind_directions,
+                     Matrix source_coordinates, Vector emission_strengths,
+                     double conversion_factor, double exp_tol,
+                     bool skip_low_wind, float low_wind_thresh, bool unsafe,
+                     bool quiet)
+      : CGaussianPuff(X, Y, Z, N_sensors, sim_dt, puff_dt, puff_duration,
+                      n_puffs, hours, wind_speeds, wind_directions,
+                      source_coordinates, emission_strengths, conversion_factor,
+                      exp_tol, skip_low_wind, low_wind_thresh, unsafe, quiet) {
 
-        std::vector<int> inds(N_points);
-        for(int i = 0; i < N_sensors; i++){
-            inds[i] = i;
-        }
-
-        this->indices = inds;
+    std::vector<int> inds(N_sensors);
+    for (int i = 0; i < N_sensors; i++) {
+      inds[i] = i;
     }
+
+    this->indices = inds;
+  }
+
 private:
     // mostly a stub, can add a precomputed spatial threshold later
     std::vector<int> coarseSpatialThreshold(double wind_shift, double thresh_constant, 
@@ -931,15 +911,15 @@ using namespace pybind11::literals;
 namespace py = pybind11;
 
 PYBIND11_MODULE(CGaussianPuff, m) {
-    py::class_<GridGaussianPuff>(m, "GridGaussianPuff")
-    .def(py::init<Vector, Vector, Vector, int, int, int, double, double, double,
-                    TimePoint, TimePoint, 
-                    Vector, Vector, Matrix, Vector, double, double, bool, double, bool, bool>())
-    .def("simulate", &CGaussianPuff::simulate);
+  py::class_<GridGaussianPuff>(m, "GridGaussianPuff")
+      .def(py::init<Vector, Vector, Vector, int, int, int, double, double,
+                    double, int, VectorXi, Vector, Vector, Matrix, Vector,
+                    double, double, bool, float, bool, bool>())
+      .def("simulate", &CGaussianPuff::simulate);
 
-    py::class_<SensorGaussianPuff>(m, "SensorGaussianPuff")
-    .def(py::init<Vector, Vector, Vector, int, double, double, double,
-                    TimePoint, TimePoint, 
-                    Vector, Vector, Matrix, Vector, double, double, bool, double, bool, bool>())
-    .def("simulate", &CGaussianPuff::simulate);
+  py::class_<SensorGaussianPuff>(m, "SensorGaussianPuff")
+      .def(py::init<Vector, Vector, Vector, int, double, double, double, int,
+                    VectorXi, Vector, Vector, Matrix, Vector, double, double,
+                    bool, double, bool, bool>())
+      .def("simulate", &CGaussianPuff::simulate);
 }

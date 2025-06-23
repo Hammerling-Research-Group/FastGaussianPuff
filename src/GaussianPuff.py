@@ -1,5 +1,6 @@
 import datetime
 from math import floor
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import numpy as np
 import pandas as pd
@@ -7,46 +8,61 @@ import pandas as pd
 from FastGaussianPuff import CGaussianPuff as fGP
 
 class GaussianPuff:
-    def __init__(self,
-                 obs_dt, sim_dt, puff_dt, 
-                 simulation_start, simulation_end,
-                 source_coordinates, emission_rates,
-                 wind_speeds, wind_directions,
-                 output_dt=None,
-                 using_sensors=False,
-                 sensor_coordinates=None,
-                 grid_coordinates=None,
-                 nx=None, ny=None, nz=None,
-                 puff_duration = 1200,
-                 skip_low_wind = False, low_wind_cutoff = -1,
-                 exp_threshold_tolerance = None,
-                 conversion_factor = 1e6*1.524,
-                 unsafe=False, quiet=True):
 
-        '''
-        Inputs: 
-            obs_dt [s] (scalar, double): 
+    def __init__(
+        self,
+        obs_dt,
+        sim_dt,
+        puff_dt,
+        simulation_start,
+        simulation_end,
+        time_zone,
+        source_coordinates,
+        emission_rates,
+        wind_speeds,
+        wind_directions,
+        output_dt=None,
+        using_sensors=False,
+        sensor_coordinates=None,
+        grid_coordinates=None,
+        nx=None,
+        ny=None,
+        nz=None,
+        puff_duration=1200,
+        skip_low_wind=False,
+        low_wind_cutoff=-1,
+        exp_threshold_tolerance=None,
+        conversion_factor=1e6 * 1.524,
+        unsafe=False,
+        quiet=True,
+    ):
+        """
+        Inputs:
+            obs_dt [s] (scalar, double):
                 time interval (dt) for the observations
                 NOTE: must be larger than sim_dt. This should be the resolution of the wind data.
-            sim_dt [s] (scalar, double): 
+            sim_dt [s] (scalar, double):
                 time interval (dt) for the simulation results
-            puff_dt [s] (scalar, double): 
+            puff_dt [s] (scalar, double):
                 time interval (dt) between two successive puffs' creation
                 NOTE: must also be a positive integer multiple of sim_dt, e.g. puff_dt = n*sim_dt for integer n > 0
             output_dt [s] (scalar, double):
                 resolution to resample the concentration to at the end of the sismulation. By default,
                 resamples to the resolution of the wind observations obs_dt.
             simulation_start, simulation_end (pd.DateTime values)
-                start and end times for the emission to be simulated.
+                start and end times for the emission to be simulated. Must be timezone-aware.
+            time_zone (timezone string):
+                timezone to use for the simulation. This should be a string that can be parsed by
+                the zoneinfo module, e.g. "America/New_York".
             source_coordinates (array, size=(n_sources, 3)) [m]:
                 holds source coordinate (x0,y0,z0) in meters for each source.
             emission_rates: (array, length=n_sources) [kg/hr]:
                 rate that each source is emitting at in kg/hr.
-            wind_speeds [m/s] (list of floats): 
+            wind_speeds [m/s] (list of floats):
                 wind speed at each time stamp, in obs_dt resolution
-            wind_directions [degree] (list of floats): 
+            wind_directions [degree] (list of floats):
                 wind direction at each time stamp, in obs_dt resolution.
-                follows the conventional definition: 
+                follows the conventional definition:
                 0 -> wind blowing from North, 90 -> E, 180 -> S, 270 -> W
             using_sensors (boolean):
                 If True, ignores grid-related input parameters and only simulates at sensor coordinates.
@@ -76,15 +92,15 @@ class GaussianPuff:
                 the tolerance used to threshold the exponentials when evaluating the Gaussian equation.
                 If, for example, exp_tol = 1e-9, the concentration at a single point for an individual time step
                 will have error less than 1e-9. Upsampling to different time resolutions may introduce extra error.
-                Default is 1e-7, which passess all safe-mode tests with less than 0.1% error. 
-            conversion_factor (scalar, float): 
+                Default is 1e-7, which passess all safe-mode tests with less than 0.1% error.
+            conversion_factor (scalar, float):
                 convert from kg/m^3 to ppm, this factor is for ch4 only
             unsafe (boolean):
-                if True, will use unsafe evaluations for some operations. This mode is faster but introduces some 
-                error. If you're unsure about results, set to False and compare error between the two methods. 
-            quiet (boolean): 
+                if True, will use unsafe evaluations for some operations. This mode is faster but introduces some
+                error. If you're unsure about results, set to False and compare error between the two methods.
+            quiet (boolean):
                if True, outputs extra information about the simulation and its progress.
-        '''
+        """
 
         self.obs_dt = obs_dt 
         self.sim_dt = sim_dt 
@@ -96,8 +112,20 @@ class GaussianPuff:
 
         self._check_timestep_parameters()
 
-        self.sim_start = simulation_start
-        self.sim_end = simulation_end
+        self.sim_start = self._ensure_utc(simulation_start)
+        self.sim_end = self._ensure_utc(simulation_end)
+
+        try:
+            time_zone = ZoneInfo(time_zone)
+        except ZoneInfoNotFoundError:
+            raise ValueError(f"Invalid timezone: {time_zone}")
+
+        utc_total_time_series = pd.date_range(
+            start=self.sim_start, end=self.sim_end, freq=f"{puff_dt}s", tz="UTC"
+        )
+        local_ts = utc_total_time_series.tz_convert(time_zone)
+        hours_arr = local_ts.hour.values
+        n_puffs = len(hours_arr)
 
         self.quiet = quiet
 
@@ -116,7 +144,7 @@ class GaussianPuff:
             self.skip_low_wind = True
             self.low_wind_cutoff = low_wind_cutoff
 
-        ns = (simulation_end-simulation_start).total_seconds()
+        ns = (self.sim_end-self.sim_start).total_seconds()
         self.n_obs = floor(ns/obs_dt) + 1 # number of observed data points we have
 
         arrays = self._check_array_dtypes(wind_speeds, wind_directions, source_coordinates, 
@@ -126,7 +154,7 @@ class GaussianPuff:
         self._check_wind_data(wind_speeds, skip_low_wind)
 
         # resample the wind data from obs_dt to the simulation resolution sim_dt
-        self._interpolate_wind_data(wind_speeds, wind_directions, puff_dt, simulation_start, simulation_end)
+        self._interpolate_wind_data(wind_speeds, wind_directions, puff_dt, self.sim_start, self.sim_end)
 
         # save timeseries of simulation resolution so we can resample back to observation later
         self.time_stamps_sim = pd.date_range(self.sim_start, self.sim_end, freq=str(self.sim_dt)+"s")
@@ -164,16 +192,24 @@ class GaussianPuff:
             self.Z = self.Z.ravel()
 
             # constructor for the c code
+            spatial_grid = (self.X, self.Y, self.Z, self.nx, self.ny, self.nz)
+            dts = (sim_dt, puff_dt, puff_duration)
+            wind = (self.wind_speeds_sim, self.wind_directions_sim)
             self.GPC = fGP.GridGaussianPuff(
-                    self.X, self.Y, self.Z, 
-                    self.nx, self.ny, self.nz, 
-                    sim_dt, puff_dt, puff_duration,
-                    simulation_start, simulation_end,
-                    self.wind_speeds_sim, self.wind_directions_sim,
-                    source_coordinates, emission_rates,
-                    conversion_factor, self.exp_threshold_tolerance,
-                    skip_low_wind, low_wind_cutoff,
-                    unsafe, quiet)
+                *spatial_grid,
+                *dts,
+                n_puffs,
+                hours_arr,
+                *wind,
+                source_coordinates,
+                emission_rates,
+                conversion_factor,
+                self.exp_threshold_tolerance,
+                skip_low_wind,
+                low_wind_cutoff,
+                unsafe,
+                quiet,
+            )
         else:
             self.using_sensors = True
             self.N_points = len(sensor_coordinates)
@@ -184,16 +220,23 @@ class GaussianPuff:
                 self.Y.append(sensor[1])
                 self.Z.append(sensor[2])
 
+            spatial_grid = (self.X, self.Y, self.Z, self.N_points)
+            dts = (sim_dt, puff_dt, puff_duration)
+            wind = (self.wind_speeds_sim, self.wind_directions_sim)
             self.GPC = fGP.SensorGaussianPuff(
-                self.X, self.Y, self.Z, 
-                self.N_points,
-                sim_dt, puff_dt, puff_duration,
-                simulation_start, simulation_end,
-                self.wind_speeds_sim, self.wind_directions_sim,
-                source_coordinates, emission_rates,
-                conversion_factor, self.exp_threshold_tolerance,
-                skip_low_wind, low_wind_cutoff,
-                unsafe, quiet
+                *spatial_grid,
+                *dts,
+                n_puffs,
+                hours_arr,
+                *wind,
+                source_coordinates,
+                emission_rates,
+                conversion_factor,
+                self.exp_threshold_tolerance,
+                skip_low_wind,
+                low_wind_cutoff,
+                unsafe,
+                quiet,
             )
 
         # initialize the final simulated concentration array
@@ -288,6 +331,23 @@ class GaussianPuff:
             raise( ValueError("[FastGaussianPuff] wind speeds must be greater than 0"))
         if np.any(ws < 1e-2):
             print("[FastGaussianPuff] WARNING: There's a wind speed < 0.01 m/s. This is likely a mistake and will cause slow performance. The simulation will continue, but results will be poor as the puff model is degenerate in low wind speeds.")
+
+    def _ensure_utc(self, dt):
+        """
+        Ensures the input datetime is timezone-aware and in UTC.
+        Converts to UTC if it's in a different timezone.
+        """
+        ts = pd.Timestamp(dt)
+
+        if ts.tz is None:
+            raise ValueError(
+                f"[FastGaussianPuff] Naive datetime detected: {dt}. Please provide a timezone-aware datetime."
+            )
+
+        if ts.tz != datetime.timezone.utc:
+            ts = ts.tz_convert("UTC")
+
+        return ts
 
     def _interpolate_wind_data(self, wind_speeds, wind_directions, puff_dt, sim_start, sim_end):
         '''

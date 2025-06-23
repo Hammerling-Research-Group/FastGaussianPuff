@@ -58,3 +58,20 @@ def test_source_coordinate_formats():
     test_params["source_coordinates"] = [[25, 25, 5], [30, 30, 5]]
     with pytest.raises(NotImplementedError):
         gp = GP(**test_params, **grid_params)
+
+
+def test_naive_tz():
+    test_params = params.copy()
+    test_params["simulation_start"] = pd.to_datetime("2022-01-01 12:00:00")
+    with pytest.raises(ValueError):
+        gp = GP(**test_params, **grid_params)
+
+    test_params = params.copy()
+    test_params["simulation_end"] = pd.to_datetime("2022-01-01 13:00:00")
+    with pytest.raises(ValueError):
+        gp = GP(**test_params, **grid_params)
+
+    test_params = params.copy()
+    test_params["time_zone"] = "bad_tz"
+    with pytest.raises(ValueError):
+        gp = GP(**test_params, **grid_params)

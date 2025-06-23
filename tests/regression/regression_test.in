@@ -9,3 +9,4 @@ coordinate_system geodetic # can be either geodetic or cartesian
 coordinate_columns ['name','lat','lon','height'] # names of the columns for coordinates
 sim_dt 1
 puff_dt 1
+time_zone America/Denver

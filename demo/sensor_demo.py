@@ -8,11 +8,13 @@ from FastGaussianPuff import GaussianPuff as GP
 # IMPORTANT: obs_dt must be a positive integer multiple of sim_dt
 obs_dt, sim_dt, puff_dt = 60, 1, 1
 
-# start and end times at minute resolution. Needs to be in the local timezone of where we're simulating
-# e.g. if we're simulating a site in England, it needs to be in UTC.
-# if we're simulating a site in Colorado, it should be in MST/MDT
-start = pd.to_datetime('2022-01-01 12:00:00')
-end = pd.to_datetime('2022-01-01 13:00:00')
+# start and end times need to be timezone-aware.
+# start/end are the times you want to simulate between. time_zone is the location you want to simulate in.
+# you can input start and end times in any timezone and they'll get converted to the time_zone you specify.
+# (e.g. input start/end in UTC and set time_zone to "America/Denver" to simulate in mountain time)
+start = pd.to_datetime("2022-01-01 12:00:00-06:00")
+end = pd.to_datetime("2022-01-01 13:00:00-06:00")
+time_zone = "America/Denver"  # alternative: "US/Mountain"
 
 # fabricated wind data
 fake_times = np.linspace(0,10,61)
@@ -22,7 +24,6 @@ wind_directions[30:60] -= 40*np.abs(np.sin(6*fake_times[30:60]))
 
 wind_speeds = np.array(wind_speeds)
 wind_directions = np.array(wind_directions)
-
 
 
 # emission source
@@ -35,12 +36,19 @@ r = 30 + 15*np.random.rand(8)
 sensor_coordinates = [[r[i]*np.cos(theta[i]), r[i]*np.sin(theta[i]), 1 + 5*np.random.rand()] for i in range(8)]
 
 
-sp = GP(obs_dt=obs_dt, sim_dt=sim_dt, puff_dt=puff_dt,
-                 simulation_start=start, simulation_end=end,
-                 source_coordinates=source_coordinates, emission_rates=emission_rate,
-                 wind_speeds=wind_speeds, wind_directions=wind_directions,
-                 using_sensors=True, sensor_coordinates=sensor_coordinates, 
-                 quiet=True # change to false for progress information
+sp = GP(
+    obs_dt=obs_dt,
+    sim_dt=sim_dt,
+    puff_dt=puff_dt,
+    simulation_start=start,
+    simulation_end=end,
+    source_coordinates=source_coordinates,
+    emission_rates=emission_rate,
+    wind_speeds=wind_speeds,
+    wind_directions=wind_directions,
+    using_sensors=True,
+    sensor_coordinates=sensor_coordinates,
+    time_zone=time_zone,
 )
 
 print("STARTING SIMULATION")
@@ -48,7 +56,7 @@ sp.simulate()
 print("SIMULATION FINISHED")
 
 print("MAKING PLOTS")
-#%% plotting
+# %% plotting
 t, n_sensors = np.shape(sp.ch4_obs) # (time, sensors)
 sensor_names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
