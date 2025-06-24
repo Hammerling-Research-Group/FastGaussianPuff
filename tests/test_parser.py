@@ -57,7 +57,7 @@ def test_dlq_setup():
     )
     gp.simulate()
 
-    parser_ch4 = pd.read_csv("./parser/out/02-01-22_09:59_exp_0.csv")
+    parser_ch4 = pd.read_csv("./parser/out/02-01-22_09-59_exp_0.csv")
 
     for i in range(0, len(sensors)):
         diff = np.abs(parser_ch4[names[i]].values[1:] - gp.ch4_obs[:, i])
@@ -81,7 +81,7 @@ def test_dlq_setup():
     )
     gp.simulate()
 
-    parser_ch4 = pd.read_csv("./parser/out/02-01-22_09:59_exp_3.csv")
+    parser_ch4 = pd.read_csv("./parser/out/02-01-22_09-59_exp_3.csv")
     for i in range(0, len(sensors)):
         diff = np.abs(parser_ch4[names[i]].values[1:] - gp.ch4_obs[:, i])
         assert np.linalg.norm(diff) < 1e-3
@@ -148,7 +148,7 @@ def test_multisource_setup():
 
         ch4 = gp.ch4_obs + ch4
 
-    parser_ch4 = pd.read_csv("./parser/out/04-08-22_10:22_exp_0.csv")
+    parser_ch4 = pd.read_csv("./parser/out/04-08-22_10-22_exp_0.csv")
     for i in range(0, len(sensors)):
         diff = np.abs(parser_ch4[names[i]].values[1:] - ch4[:, i])
         assert np.linalg.norm(diff) < 1e-3
