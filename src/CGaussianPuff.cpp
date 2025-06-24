@@ -16,6 +16,10 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+
 typedef Eigen::Vector2d Vector2d;
 typedef Eigen::VectorXd Vector;
 typedef Eigen::Ref<Vector> RefVector;
