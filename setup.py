@@ -67,4 +67,5 @@ setup(
     ext_modules=[CMakeExtension("FastGaussianPuff")],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
+    license="MIT",
 )
