@@ -25,7 +25,7 @@ Currently, you need four sets of parameters to set up a simulation.
 3. Wind data. You need timeseries for both wind speed and wind direction that are regularly spaced in time.
 4. Timestep parameters. These parameters affect accuracy of the simulation. Higher wind speeds or rapid changes in wind direction means these parameters need to be smaller to maintain accuracy. Hopefully one day we can set these automatically based on the wind data.
 
-There are descriptions for each parameter in the [class file](GaussianPuff.py) and demos for how to use the code in the `demos/` directory.
+There are descriptions for each parameter in the [class file](src/GaussianPuff.py) and demos for how to use the code in the `demos/` directory.
 
 ### Site geometry
 Currently, we care about two use cases. Each of these have smart implementations that are specialized to be fast for each scenario and require different 
