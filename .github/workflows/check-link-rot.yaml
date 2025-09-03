@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install lychee (Link Checker)
-        uses: lycheeverse/lychee-action@v1.8.0
+        uses: lycheeverse/lychee-action@v2.0.2
         with:
           args: --verbose --exclude-mail --timeout 20 .
 
