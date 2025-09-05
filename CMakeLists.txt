@@ -20,8 +20,9 @@ if(NOT Python3_SOABI)
 endif()
 
 # https://stackoverflow.com/questions/25421479/clang-and-undefined-symbols-when-building-a-library
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
+if(APPLE) # for pybind11 on mac
+  set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 endif()
 
 add_library(CGaussianPuff.${Python3_SOABI} SHARED ${SOURCES})
