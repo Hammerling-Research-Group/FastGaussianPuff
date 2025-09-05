@@ -3,8 +3,9 @@ import os
 import pandas as pd
 import numpy as np
 
+dir = os.path.dirname(os.path.abspath(__file__)) + "/regression/"
+
 def test_regression():
-    dir = "./regression/"
     p = PuffParser(dir + "regression_test.in")
     p.run_exp()
 

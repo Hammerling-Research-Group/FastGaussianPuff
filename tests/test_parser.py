@@ -1,17 +1,18 @@
-import pytest
 from FastGaussianPuff import PuffParser as parser
 from FastGaussianPuff import GaussianPuff as GP
 import pandas as pd
 import numpy as np
+import os
 
-import matplotlib.pyplot as plt
+dir = os.path.dirname(os.path.abspath(__file__)) + "/parser/"
+ref_dir = os.path.dirname(os.path.abspath(__file__)) + "/regression/in/"
 
 def test_dlq_setup():
-    p = parser("./parser/in/dlq.in")
+    p = parser(dir + "in/dlq.in")
     p.run_exp()
 
     # manually set up experiment and compare to parser output for 2 samples
-    dat_dir = "./regression/in/"
+    dat_dir = ref_dir
     sensors = [
         [488164.98285821447, 4493931.649887275, 2.4],
         [488198.08502694493, 4493932.618594243, 2.4],
@@ -57,7 +58,7 @@ def test_dlq_setup():
     )
     gp.simulate()
 
-    parser_ch4 = pd.read_csv("./parser/out/02-01-22_09-59_exp_0.csv")
+    parser_ch4 = pd.read_csv(dir + "out/02-01-22_09-59_exp_0.csv")
 
     for i in range(0, len(sensors)):
         diff = np.abs(parser_ch4[names[i]].values[1:] - gp.ch4_obs[:, i])
@@ -81,17 +82,17 @@ def test_dlq_setup():
     )
     gp.simulate()
 
-    parser_ch4 = pd.read_csv("./parser/out/02-01-22_09-59_exp_3.csv")
+    parser_ch4 = pd.read_csv(dir + "out/02-01-22_09-59_exp_3.csv")
     for i in range(0, len(sensors)):
         diff = np.abs(parser_ch4[names[i]].values[1:] - gp.ch4_obs[:, i])
         assert np.linalg.norm(diff) < 1e-3
 
 def test_multisource_setup():
-    p = parser("./parser/in/multi.in")
+    p = parser(dir + "in/multi.in")
     p.run_exp()
 
     # manually set up experiment and compare to parser output for 2 samples
-    dat_dir = "./regression/in/"
+    dat_dir = ref_dir
     sensors = [
         [488164.98285821447, 4493931.649887275, 2.4],
         [488198.08502694493, 4493932.618594243, 2.4],
@@ -148,10 +149,7 @@ def test_multisource_setup():
 
         ch4 = gp.ch4_obs + ch4
 
-    parser_ch4 = pd.read_csv("./parser/out/04-08-22_10-22_exp_0.csv")
+    parser_ch4 = pd.read_csv(dir + "out/04-08-22_10-22_exp_0.csv")
     for i in range(0, len(sensors)):
         diff = np.abs(parser_ch4[names[i]].values[1:] - ch4[:, i])
         assert np.linalg.norm(diff) < 1e-3
-
-if __name__ == '__main__':
-  test_dlq_setup()
