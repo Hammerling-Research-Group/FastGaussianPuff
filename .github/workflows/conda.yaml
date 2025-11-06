@@ -1,7 +1,7 @@
 name: upload_conda
 
 on:
-  workflow_dispatch:        # This allows to trigger the workflow manually
+  workflow_dispatch:
 
 jobs:
   conda_deployment_with_new_tag:
