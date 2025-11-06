@@ -1,0 +1,55 @@
+package:
+  name: fastgaussianpuff
+  version: {{ GIT_DESCRIBE_TAG }}
+
+source:
+  git_url: ..
+
+build:
+  number: 0
+  string: py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}
+  script: "{{ PYTHON }} -m pip install . -vv"
+  skip: True # [win]
+  skip: True # [py<39]
+    
+requirements:
+
+  build:
+    - {{ compiler('cxx') }}
+    - cmake >=3.19
+    - make
+    - python
+    - pybind11
+    - eigen
+    - pip
+  host:
+    - scikit-build-core
+    - python
+    - numpy >=2.0
+    - pybind11
+    - eigen
+  run:
+    - python
+    - numpy >=2.0
+
+test:
+  imports:
+    - FastGaussianPuff
+  commands:
+    - pytest
+  requires:
+    - pytest
+    - pandas
+    - numpy
+  source_files:
+    - tests/
+
+about:
+  home: https://github.com/Hammerling-Research-Group/FastGaussianPuff
+  license_family: MIT
+  license_file: LICENSE
+  summary: FastGaussianPuff- A high-performance Gaussian puff atmospheric dispersion model.
+
+extra:
+  recipe-maintainers:
+    - rykerfish
