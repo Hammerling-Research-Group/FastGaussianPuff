@@ -3,19 +3,17 @@ name: upload_conda
 on:
   release:
     types: ['released', 'prereleased']
-  pull_request: # for testing
-    types: ['opened', 'edited', 'reopened', 'synchronize']
-  workflow_dispatch:        # used to trigger manually
+#   pull_request: # for testing
+    # types: ['opened', 'edited', 'reopened', 'synchronize']
+  workflow_dispatch: # used to trigger manually
 
 jobs:
   conda_deployment_with_new_tag:
     name: Conda deployment of package with Python ${{ matrix.python-version }}
-    # runs-on: ubuntu-latest, macos-latest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest, macos-latest
     strategy:
       matrix:
-        # python-version: ["3.10", "3.11", "3.12", "3.13"]
-        python-version: ["3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
         with:
