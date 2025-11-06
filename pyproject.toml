@@ -1,0 +1,37 @@
+[build-system]
+requires = [
+    "scikit-build-core>=0.10",
+    "setuptools>=61",
+    "wheel",
+    "pybind11>=2.10",
+    "numpy>=2.3"
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "FastGaussianPuff"
+version = "0.1.0"
+description = "FastGaussianPuff: A high-performance Gaussian puff atmospheric dispersion model."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Ryker Fish", email = "rfish@mines.edu" }
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.23",
+    "pybind11>=2.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/Hammerling-Research-Group/FastGaussianPuff"
+Repository = "https://github.com/Hammerling-Research-Group/FastGaussianPuff"
+
+[tool.scikit-build]
+wheel.packages = ["FastGaussianPuff"]
+
+[tool.scikit-build.cmake]
+source-dir = "."
+define = { "CMAKE_CXX_STANDARD" = "11" }
+version = ">=3.19"
+
