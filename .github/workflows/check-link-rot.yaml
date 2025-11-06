@@ -1,4 +1,4 @@
-name: Check Link Rot
+name: check_link_rot
 
 on:
   push:

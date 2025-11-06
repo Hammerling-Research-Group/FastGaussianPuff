@@ -1,0 +1,7 @@
+# create the environment from this file with `conda env create -f conda_env.yml`
+name: build
+channels:
+  - conda-forge
+dependencies:
+  - anaconda-client
+  - conda-build

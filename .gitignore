@@ -12,6 +12,8 @@ cmap/
 *.gif
 build/
 *.egg-info/
+compile_commands.json
+.cache/
 
 # other
 workspace/
