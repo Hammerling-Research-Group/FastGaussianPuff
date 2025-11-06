@@ -53,4 +53,5 @@ jobs:
           user: rykerfish
           overwrite: true
           upload: true
+          label: main
           token: ${{ secrets.ANACONDA_TOKEN }}
