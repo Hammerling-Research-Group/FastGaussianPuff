@@ -29,7 +29,7 @@ jobs:
           auto-activate-base: false
           show-channel-urls: true
       - name: Build and upload the conda packages
-        uses: uibcdf/action-build-and-upload-conda-packages@v2.0.0
+        uses: uibcdf/action-build-and-upload-conda-packages@v1.4.0
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         with:
