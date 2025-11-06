@@ -2,7 +2,6 @@
 requires = [
     "scikit-build-core>=0.10",
     "setuptools>=61",
-    "wheel",
     "pybind11>=2.10",
     "numpy>=1.23"
 ]
@@ -20,9 +19,7 @@ authors = [
 requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.23",
-    "pybind11>=2.10",
 ]
-
 [project.urls]
 Homepage = "https://github.com/Hammerling-Research-Group/FastGaussianPuff"
 Repository = "https://github.com/Hammerling-Research-Group/FastGaussianPuff"
