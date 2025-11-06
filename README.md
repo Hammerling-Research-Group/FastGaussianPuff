@@ -1,6 +1,4 @@
 # FastGaussianPuff
-*Production code the Fast Implementation of the Gaussian Puff Forward Atmospheric Model*
-
 [![build](https://github.com/Hammerling-Research-Group/FastGaussianPuff/actions/workflows/build.yml/badge.svg)](https://github.com/Hammerling-Research-Group/FastGaussianPuff/actions/workflows/build.yml)
 [![Check Link Rot](https://github.com/Hammerling-Research-Group/FastGaussianPuff/actions/workflows/check-link-rot.yaml/badge.svg)](https://github.com/Hammerling-Research-Group/FastGaussianPuff/actions/workflows/check-link-rot.yaml)
 
@@ -15,6 +13,29 @@ where $S_t$ is the set of active puffs at time $t$ and
 $$ c_p(x,y,z,t) = \frac{q}{(2\pi)^{3/2}  \sigma_y^2 \sigma_z} \exp{\left(-\frac{(x-ut)^2+y^2}{2\sigma_y^2}\right)} \left[\exp{\left(-\frac{(z-z_0)^2}{2\sigma_z^2}\right)} + \exp{\left(-\frac{(z+z_0)^2}{2\sigma_z^2}\right)} \right]$$
 
 is the concentration field for a single puff. Here, $q$ is the amount of methane in a puff, $u$ is wind speed, $z_0$ is the emission release height, and $\sigma_{y,z}$ are dispersion parameters that control plume spread.
+## Installation instructions
+**Windows is not supported. We recommend using WSL.**
+
+You can install the latest release from conda:
+```shell
+conda install rykerfish::fastgaussianpuff
+```
+### Alternatives
+We highly recommend using a [conda](https://docs.conda.io/en/latest/) environment. To install, create the environment and install the code into it:
+```shell
+conda env create -f environment.yml
+conda activate gp
+pip install .
+```
+
+Alternatively, you can install manually using CMake. You can compile and install everything with:
+```shell
+$ mkdir build && cd build
+$ cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
+$ make all install
+```
+It is advisable to install the library in the conda environment so the python bindings are easily accessible. If you don't want this, omit `-DCMAKE_INSTALL_PREFIX`
+
 
 ## How this code works
 Fast implementations of algorithms to simulate this model live in some C++ code. This has a Python interface and is designed to be used from Python.
@@ -52,35 +73,6 @@ The module requires the input timestamps to be time zone-aware, and the input ti
 import zoneinfo
 zoneinfo.available_timezones()
 ```
-
-## Installation instructions
-**Currently, this install process will not work on Windows.**
-
-Python 3.9 or higher is required. We highly recommend using a [conda](https://docs.conda.io/en/latest/) environment. You can create the environment with
-
-```shell
-$ conda env create -f environment.yml
-```
-
-Then, activate the environment with:
-
-```shell
-$ conda activate gp
-```
-
-The module works with pip. To install, use:
-```shell
-$ pip install .
-```
-
-Alternatively, you can install manually using CMake. You can compile and install everything with:
-
-```shell
-$ mkdir build && cd build
-$ cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
-$ make all install
-```
-It is advisable to install the library in the conda environment so that the python bindings are available. The environment variable $CONDA_PREFIX is set to the root of the conda environment.
 
 ## Danger zone
 This section contains details on special parameters that may cause erroneous output and have specific use-cases. When in doubt, re-run the model with default parameters and compare.
