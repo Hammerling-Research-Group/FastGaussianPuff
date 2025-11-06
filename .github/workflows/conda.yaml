@@ -1,7 +1,11 @@
 name: upload_conda
 
 on:
-  workflow_dispatch:
+  release:
+    types: ['released', 'prereleased']
+  pull_request: # for testing
+    types: ['opened', 'edited', 'reopened', 'synchronize']
+  workflow_dispatch:        # used to trigger manually
 
 jobs:
   conda_deployment_with_new_tag:
