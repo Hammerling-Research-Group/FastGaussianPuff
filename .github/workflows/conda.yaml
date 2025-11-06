@@ -1,4 +1,4 @@
-name: Build and upload conda packages
+name: upload_conda
 
 on:
   workflow_dispatch:        # This allows to trigger the workflow manually
