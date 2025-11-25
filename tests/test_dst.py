@@ -31,7 +31,7 @@ def test_length_over_dst(mode_params, dst_start, dst_end, expected_length):
 
     length = len(gp.ch4_obs)
 
-    assert(length == expected_length + 1) # TODO fix the off by one error in the interface
+    assert length == expected_length
 
 
 @pytest.mark.parametrize(("mode_params"), [grid_params, sensor_params])

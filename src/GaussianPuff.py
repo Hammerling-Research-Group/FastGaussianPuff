@@ -158,7 +158,11 @@ class GaussianPuff:
         self._interpolate_wind_data(wind_speeds, wind_directions, puff_dt, self.sim_start, self.sim_end)
 
         # save timeseries of simulation resolution so we can resample back to observation later
-        self.time_stamps_sim = pd.date_range(self.sim_start, self.sim_end, freq=str(self.sim_dt)+"s")
+        self.time_stamps_sim = pd.date_range(
+            self.sim_start,
+            self.sim_end - pd.to_timedelta(sim_dt, unit="s"),
+            freq=str(self.sim_dt) + "s",
+        )
         self.n_sim = len(self.time_stamps_sim) # number of simulation time steps
 
         source_coordinates = ih.parse_source_coords(source_coordinates)
