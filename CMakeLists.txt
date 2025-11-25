@@ -32,4 +32,4 @@ target_compile_options(CGaussianPuff.${Python3_SOABI} PRIVATE -fPIC -O3 -Wall -f
 target_link_libraries(CGaussianPuff.${Python3_SOABI} PRIVATE pybind11::pybind11 Eigen3::Eigen)
 
 install(TARGETS CGaussianPuff.${Python3_SOABI} DESTINATION ${Python3_SITEARCH}/FastGaussianPuff)
-install(FILES src/GaussianPuff.py src/parser.py src/__init__.py DESTINATION ${Python3_SITEARCH}/FastGaussianPuff)
+install(FILES src/GaussianPuff.py src/parser.py src/__init__.py src/interface_helpers.py src/GaussianPlume.py DESTINATION ${Python3_SITEARCH}/FastGaussianPuff)

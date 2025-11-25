@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from FastGaussianPuff import CGaussianPuff as fGP
+from FastGaussianPuff import interface_helpers as ih
 
 class GaussianPuff:
 
@@ -112,8 +113,8 @@ class GaussianPuff:
 
         self._check_timestep_parameters()
 
-        self.sim_start = self._ensure_utc(simulation_start)
-        self.sim_end = self._ensure_utc(simulation_end)
+        self.sim_start = ih.ensure_utc(simulation_start)
+        self.sim_end = ih.ensure_utc(simulation_end)
 
         try:
             time_zone = ZoneInfo(time_zone)
@@ -160,7 +161,7 @@ class GaussianPuff:
         self.time_stamps_sim = pd.date_range(self.sim_start, self.sim_end, freq=str(self.sim_dt)+"s")
         self.n_sim = len(self.time_stamps_sim) # number of simulation time steps
 
-        source_coordinates = self._parse_source_coords(source_coordinates)
+        source_coordinates = ih.parse_source_coords(source_coordinates)
 
         if puff_duration == None:
             puff_duration = self.n_sim # ensures we don't overflow time index
@@ -242,30 +243,6 @@ class GaussianPuff:
         # initialize the final simulated concentration array
         self.ch4_sim = np.zeros((self.n_sim, self.N_points)) # simulation in sim_dt resolution, flattened
 
-    def _parse_source_coords(self, source_coordinates):
-        size = np.shape(source_coordinates)
-        if len(size) == 1:
-            if size[0] == 3:
-                source_coordinates = np.array(
-                    [source_coordinates]
-                )  # now a nested array- C++ code expects this format
-            else:
-                print(
-                    "[fGP] Error: source_coordinates must be a 3-element array, e.g. [x0, y0, z0]."
-                )
-                exit(-1)
-        else:
-            if size[0] == 1 and size[1] == 3:
-                return source_coordinates
-            elif size[0] > 1 and size[1] == 3:
-                raise (
-                    NotImplementedError(
-                        "[fGP] Error: Multi-source currently isn't implemented. Only provide coordinates for a single source, e.g. [x0, y0, z0] or [[x0, y0, z0]]."
-                    )
-                )
-
-        return source_coordinates
-
     def _check_timestep_parameters(self):
 
         # rationale: negative time seems bad. maybe ask a physicist.
@@ -331,23 +308,6 @@ class GaussianPuff:
             raise( ValueError("[FastGaussianPuff] wind speeds must be greater than 0"))
         if np.any(ws < 1e-2):
             print("[FastGaussianPuff] WARNING: There's a wind speed < 0.01 m/s. This is likely a mistake and will cause slow performance. The simulation will continue, but results will be poor as the puff model is degenerate in low wind speeds.")
-
-    def _ensure_utc(self, dt):
-        """
-        Ensures the input datetime is timezone-aware and in UTC.
-        Converts to UTC if it's in a different timezone.
-        """
-        ts = pd.Timestamp(dt)
-
-        if ts.tz is None:
-            raise ValueError(
-                f"[FastGaussianPuff] Naive datetime detected: {dt}. Please provide a timezone-aware datetime."
-            )
-
-        if ts.tz != datetime.timezone.utc:
-            ts = ts.tz_convert("UTC")
-
-        return ts
 
     def _interpolate_wind_data(self, wind_speeds, wind_directions, puff_dt, sim_start, sim_end):
         '''

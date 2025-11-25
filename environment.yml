@@ -12,3 +12,5 @@ dependencies:
   - make
   - cmake
   - eigen
+  - numba
+  - tbb
