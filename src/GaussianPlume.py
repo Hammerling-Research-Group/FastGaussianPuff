@@ -32,15 +32,19 @@ class GaussianPlume:
         self.Y = Y
         self.Z = Z
 
+        # this uses the usual conversion factor (see GaussianPuff) but needs the extra
+        # factor of 3600 since emission rate is kg/hr and wind speed is m/s
+        self.conversion_factor = 1e6 * 1.524 / 3600.0
+
     def simulate(self):
         stability_class = np.array(
             self.stabilityClassifier(self.wind_speed, self.local_hour)
         )
-        self.X = self.X - self.source_coordinates[0]
-        self.Y = self.Y - self.source_coordinates[1]
         theta = self.windDirectionToAngle(self.wind_direction)
 
-        X_rot, Y_rot = self.rotate_points(self.X, self.Y, 0, 0, theta)
+        x0 = self.source_coordinates[0]
+        y0 = self.source_coordinates[1]
+        X_rot, Y_rot = self.rotate_points(self.X, self.Y, x0, y0, theta)
 
         stab_arr = np.array([ord(c) for c in stability_class], dtype=np.int32)
         sigmaY, sigmaZ = self.getSigmaCoefficients(stab_arr, X_rot)
@@ -56,14 +60,15 @@ class GaussianPlume:
             self.Z,
             self.emission_rate,
             self.wind_speed,
+            self.source_coordinates[2],
             sigmaY,
             sigmaZ,
         )
 
         return concentration
 
-    def GaussianPlume(self, X, Y, Z, Q, u, sigmaY, sigmaZ):
-        inds = np.where((sigmaY > 0) & (sigmaZ > 0) & (X >= 0))
+    def GaussianPlume(self, X, Y, Z, Q, u, z0, sigmaY, sigmaZ):
+        inds = np.where((sigmaY > 0) & (sigmaZ > 0) & (X > 0))
         if len(inds[0]) == 0:
             return np.zeros_like(X)
 
@@ -71,9 +76,12 @@ class GaussianPlume:
         C[inds] = (
             (Q / (2 * np.pi * u * sigmaY[inds] * sigmaZ[inds]))
             * np.exp(-0.5 * (Y[inds] / sigmaY[inds]) ** 2)
-            * np.exp(-0.5 * (Z[inds] / sigmaZ[inds]) ** 2)
+            * (
+                np.exp(-0.5 * ((Z[inds] - z0) / sigmaZ[inds]) ** 2)
+                + np.exp(-0.5 * ((Z[inds] + z0) / sigmaZ[inds]) ** 2)
+            )
         )
-        return C
+        return C * self.conversion_factor
 
     def rotate_points(self, X, Y, x0, y0, theta):
         cosine = np.cos(theta)
