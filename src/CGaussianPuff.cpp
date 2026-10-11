@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <stdexcept>
 #include <time.h>
 #include <chrono>
 #include <functional>
@@ -241,18 +242,19 @@ private:
         // find out when puff will leave the domain
         double t = calculatePlumeTravelTime(thresh_xy_max, ws); // number of seconds til plume leaves grid
 
-        int n_time_steps = ceil(t / sim_dt); // rescale to unitless number of timesteps
+        if (!std::isfinite(t) || t < 0) {
+            throw std::runtime_error("Invalid plume travel time; check source/receptor geometry and wind inputs");
+        }
+        // Limit the allocation before converting to int. ch4 already limits
+        // this puff to its configured lifetime and the remaining simulation.
+        int n_time_steps = static_cast<int>(std::min(
+            std::ceil(t / sim_dt), static_cast<double>(ch4.rows() - 1)));
 
         std::vector<double> sigma_y(n_time_steps+1);
         std::vector<double> sigma_z(n_time_steps+1);
 
         // gets the dispersion coefficient for the puff at each location on its path
         getPuffCenteredSigmas(sigma_y, sigma_z, n_time_steps, ws, stability_class);
-
-        // bound check on time
-        if (n_time_steps >= ch4.rows()) {
-            n_time_steps = ch4.rows() - 1;
-        }
 
         double shift_per_step = ws*sim_dt;
         double x_shift_per_step = cosine*shift_per_step;
@@ -658,10 +660,15 @@ private:
         X_centered = X.array() - x0;
         Y_centered = Y.array() - y0;
 
-        x_min = X.minCoeff() - x0;
-        y_min = Y.minCoeff() - y0;
-        x_max = X.maxCoeff() - x0;
-        y_max = Y.maxCoeff() - y0;
+        // Include the emitting source as well as all receptors in the box.
+        // Keep the source strictly inside: a source on an edge can give a
+        // zero exit distance for outward winds. Bounds already enclosing the
+        // source by at least one metre remain unchanged.
+        const double source_margin = 1.0; // metres
+        x_min = std::min(X.minCoeff() - x0, -source_margin);
+        y_min = std::min(Y.minCoeff() - y0, -source_margin);
+        x_max = std::max(X.maxCoeff() - x0, source_margin);
+        y_max = std::max(Y.maxCoeff() - y0, source_margin);
     }
 
     // convert wind direction (degrees) to the angle (radians) between the wind vector and positive x-axis
