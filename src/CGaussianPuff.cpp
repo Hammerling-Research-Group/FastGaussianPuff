@@ -48,10 +48,10 @@ protected:
     Vector emission_strengths;
 
     double x0, y0, z0; // current iteration's source coordinates
-    double x_min, y_min; // cornners of the bounding box containing the source and all sensors
+double x_min, y_min; // corners of the bounding box containing the source and all sensors
     double x_max, y_max; 
 
-    std::function<double(double)> exp;
+std::function<double(double)> exp;
 
     double conversion_factor;
     double exp_tol;
