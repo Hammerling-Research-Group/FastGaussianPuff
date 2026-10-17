@@ -48,7 +48,7 @@ protected:
     Vector emission_strengths;
 
     double x0, y0, z0; // current iteration's source coordinates
-    double x_min, y_min; // current mins for the grid centered at the current source
+    double x_min, y_min; // cornners of the bounding box containing the source and all sensors
     double x_max, y_max; 
 
     std::function<double(double)> exp;
@@ -245,8 +245,8 @@ private:
         if (!std::isfinite(t) || t < 0) {
             throw std::runtime_error("Invalid plume travel time; check source/receptor geometry and wind inputs");
         }
-        // Limit the allocation before converting to int. ch4 already limits
-        // this puff to its configured lifetime and the remaining simulation.
+
+        // bounds check on time
         int n_time_steps = static_cast<int>(std::min(
             std::ceil(t / sim_dt), static_cast<double>(ch4.rows() - 1)));
 
@@ -660,10 +660,8 @@ private:
         X_centered = X.array() - x0;
         Y_centered = Y.array() - y0;
 
-        // Include the emitting source as well as all receptors in the box.
-        // Keep the source strictly inside: a source on an edge can give a
-        // zero exit distance for outward winds. Bounds already enclosing the
-        // source by at least one metre remain unchanged.
+        // bounding box containing the source and all sensors
+        // source must explicitly be within this box for the exit time calculation
         const double source_margin = 1.0; // metres
         x_min = std::min(X.minCoeff() - x0, -source_margin);
         y_min = std::min(Y.minCoeff() - y0, -source_margin);
